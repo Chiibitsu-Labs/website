@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProject } from '@/config/projects';
+import { getProjectBySlug } from '@/lib/db';
 import { createBookingEvent, getAvailableSlots } from '@/lib/google-calendar';
 import { sendBookingConfirmationToBooker, sendBookingNotificationToAdmin } from '@/lib/email';
 
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const project = getProject(slug);
+    const project = await getProjectBySlug(slug);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }

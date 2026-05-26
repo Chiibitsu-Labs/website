@@ -218,7 +218,8 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
   });
 
   const events = res.data.items ?? [];
-  const { projects: projectList } = await import('@/config/projects');
+  const { getProjects } = await import('@/lib/db');
+  const projectList = await getProjects();
 
   return events
     .filter((e) => e.start?.dateTime)

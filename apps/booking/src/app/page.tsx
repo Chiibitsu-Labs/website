@@ -1,20 +1,21 @@
-import { projects, siteConfig } from '@/config/projects';
+import { siteConfig } from '@/config/projects';
+import { getProjects } from '@/lib/db';
 import { ProjectCard } from '@/components/ProjectCard';
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const projects = await getProjects();
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-gray-900">{siteConfig.brandName}</span>
-          </div>
+          <span className="text-lg font-bold text-gray-900">{siteConfig.brandName}</span>
           <span className="text-sm text-gray-400">{siteConfig.tagline}</span>
         </div>
       </header>
 
-      {/* Hero */}
       <main className="max-w-2xl mx-auto px-4 py-10">
         <div className="mb-10">
           <h1 className="text-3xl font-extrabold text-gray-900 mb-2 leading-tight">

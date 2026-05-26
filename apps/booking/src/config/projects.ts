@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// BOOKING PROJECTS CONFIGURATION
-// Edit this file to add, remove, or update your booking projects.
+// SEED PROJECTS — initial data loaded into the database on first setup.
+// Once the database is connected, manage projects from the /admin UI instead.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 1=Mon, ... 6=Sat
@@ -49,7 +49,7 @@ export interface Project {
 // YOUR PROJECTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const projects: Project[] = [
+export const SEED_PROJECTS: Project[] = [
   {
     slug: 'ai-at-work',
     name: 'AI @ Work: Use Case Lab',
@@ -155,6 +155,3 @@ export const siteConfig = {
   timezone: process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila',
 };
 
-export function getProject(slug: string): Project | undefined {
-  return projects.find((p) => p.slug === slug);
-}

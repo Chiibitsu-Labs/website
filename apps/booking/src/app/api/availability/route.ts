@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProject } from '@/config/projects';
+import { getProjectBySlug } from '@/lib/db';
 import { getAvailableSlots } from '@/lib/google-calendar';
 import { parseISO, isValid, isBefore, startOfDay, addWeeks } from 'date-fns';
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing slug or date' }, { status: 400 });
   }
 
-  const project = getProject(slug);
+  const project = await getProjectBySlug(slug);
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
