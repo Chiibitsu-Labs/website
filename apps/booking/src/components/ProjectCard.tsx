@@ -59,7 +59,7 @@ export function ProjectCard({ project }: Props) {
   const colors = getColors(project.branding.primaryColor);
 
   return (
-    <Link href={`/book/${project.slug}`} className="block group">
+    <Link href={`/${project.slug}`} className="block group">
       <div
         className={`
           rounded-2xl border-2 p-6 transition-all duration-200
