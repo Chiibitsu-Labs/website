@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chiibitsu Labs — More Human, by Design</title>
+  <meta name="color-scheme" content="only light" />
+  <meta name="description" content="Chiibitsu Labs helps people and organizations become more human, by design — at the intersection of behavior, systems thinking, and emerging technology." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink:        #0E0A1A;
+      --ink-soft:   #3D3550;
+      --ink-faint:  #8A7EA0;
+      --page:       #FAFAF8;
+      --page-alt:   #F3EFF8;
+      --purple:     #6B3FA0;
+      --purple-dk:  #3D1F6B;
+      --purple-lt:  #EDE5F8;
+      --purple-mid: #9B6DC5;
+      --rule:       #E2DBF0;
+      --white:      #FFFFFF;
+      --dark:       #0A0614;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    html { background: #FAFAF8 !important; }
+    body {
+      color-scheme: only light;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.5;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 52px;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .nav-logo {
+      display: flex; flex-direction: column; gap: 1px;
+      text-decoration: none;
+    }
+    .nav-logo-main {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--purple-dk);
+    }
+    .nav-logo-sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px; font-style: italic;
+      color: var(--ink-faint); letter-spacing: 0.04em;
+    }
+    .nav-cta {
+      background: var(--purple); color: white;
+      font-size: 13px; font-weight: 500;
+      padding: 10px 24px; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .nav-cta:hover { background: var(--ink); transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--page);
+      min-height: 100vh;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 140px 52px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -120px; right: -80px;
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(107,63,160,0.12) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 28px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow::before {
+      content: ''; width: 36px; height: 1px; background: var(--purple);
+    }
+    .hero-h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 6.5vw, 96px);
+      font-weight: 300; line-height: 1.0;
+      color: var(--ink); max-width: 820px;
+      margin-bottom: 12px;
+    }
+    .hero-h1 em { font-style: italic; color: var(--purple); }
+    .hero-source {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; font-style: italic;
+      color: var(--ink-faint); margin-bottom: 40px;
+    }
+    .hero-thesis {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 2.8vw, 34px);
+      font-weight: 300; line-height: 1.35;
+      color: var(--ink-soft); max-width: 640px; margin-bottom: 48px;
+    }
+    .hero-thesis strong {
+      font-weight: 600; color: var(--ink);
+    }
+    .hero-cta-row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--purple); color: white;
+      font-size: 14px; font-weight: 500;
+      padding: 14px 32px; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .btn-primary:hover { background: var(--ink); transform: translateY(-2px); }
+    .btn-ghost {
+      font-size: 13px; color: var(--ink-soft);
+      text-decoration: none; border-bottom: 1px solid var(--rule);
+      padding-bottom: 2px; transition: color .2s, border-color .2s;
+    }
+    .btn-ghost:hover { color: var(--purple); border-color: var(--purple); }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      background: var(--purple-dk); padding: 11px 0; overflow: hidden;
+    }
+    .ticker { display: flex; animation: tick 30s linear infinite; white-space: nowrap; }
+    .ticker-item {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.6); padding: 0 36px;
+    }
+    .ticker-item::after { content: '·'; margin-left: 36px; color: rgba(255,255,255,0.25); }
+    @keyframes tick { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* ── SHARED ── */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 52px; }
+    .section-label {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.24em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 48px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::after { content: ''; flex:1; height: 1px; background: var(--rule); }
+
+    .fade-up { opacity: 0; transform: translateY(20px); transition: opacity .7s ease, transform .7s ease; }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── THESIS BAND ── */
+    .thesis-band {
+      background: var(--ink); padding: 72px 0;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .thesis-band-inner {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 60px; align-items: center;
+    }
+    .thesis-band-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px; font-style: italic;
+      color: rgba(255,255,255,0.35); line-height: 1.5;
+    }
+    .thesis-band-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(26px, 3vw, 42px);
+      font-weight: 300; color: white; line-height: 1.3;
+    }
+    .thesis-band-text em { font-style: italic; color: var(--purple-mid); }
+    .thesis-band-text strong { font-weight: 600; }
+
+    /* ── SERVICES ── */
+    .services {
+      background: #FAFAF8; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .services-intro {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 60px;
+      margin-bottom: 64px; align-items: end;
+    }
+    .services-h2 {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(40px, 4.5vw, 60px);
+      font-weight: 300; line-height: 1.05;
+    }
+    .services-h2 em { font-style: italic; color: var(--purple); }
+    .services-intro-text {
+      color: #3D3550 !important;
+      font-size: 15px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.8; max-width: 520px;
+    }
+
+    .services-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 2px; background: var(--rule);
+    }
+    .s-card {
+      background: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(107,63,160,0.07);
+      background: var(--white); padding: 44px 40px;
+      display: flex; flex-direction: column; gap: 18px;
+      transition: background .2s; position: relative; overflow: hidden;
+    }
+    .s-card:hover { background: var(--page-alt); }
+    .s-card::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      width: 0; height: 2px; background: var(--purple);
+      transition: width .35s ease;
+    }
+    .s-card:hover::after { width: 100%; }
+    .s-card.soon { background: var(--page); }
+    .s-card.soon:hover { background: var(--page); }
+    .s-card.soon::after { display: none; }
+
+    .s-top { display: flex; justify-content: space-between; align-items: center; }
+    .s-badge {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .s-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .s-badge.live { color: var(--purple); }
+    .s-badge.live .dot { background: var(--purple); }
+    .s-badge.soon { color: var(--ink-faint); }
+    .s-badge.soon .dot { background: var(--ink-faint); }
+    .s-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; color: var(--ink-faint);
+    }
+    .s-title {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 30px; font-weight: 600;
+      color: var(--ink); line-height: 1.1;
+    }
+    .s-soon .s-title { color: var(--ink-soft); }
+    .s-desc {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.75; flex: 1;
+    }
+    .s-link {
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--purple); text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      width: fit-content; border-bottom: 1px solid var(--purple-lt);
+      padding-bottom: 2px; transition: gap .2s;
+    }
+    .s-link:hover { gap: 10px; }
+    .s-link.muted { color: var(--ink-faint); border-color: var(--rule); }
+
+    /* ── CASE STUDIES ── */
+    .cases {
+      background: #F3EFF8; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .cases-grid { display: flex; flex-direction: column; gap: 2px; background: var(--rule); margin-top: 0; }
+    .case-row {
+      background: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(107,63,160,0.06);
+      background: var(--white); padding: 40px 44px;
+      display: grid; grid-template-columns: 120px 1fr 200px;
+      gap: 40px; align-items: start;
+      transition: background .2s;
+    }
+    .case-row:hover {
+      background: #EDE5F8 !important; background: var(--page-alt); }
+    .case-tag {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--purple); padding-top: 4px; line-height: 1.4;
+    }
+    .case-body {
+      color-scheme: light; }
+    .case-title {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600;
+      color: var(--ink); margin-bottom: 8px; line-height: 1.2;
+    }
+    .case-text {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.7;
+    }
+    .case-result {
+      text-align: right; padding-top: 4px;
+    }
+    .case-result-num {
+      color: #6B3FA0 !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px; font-weight: 300;
+      color: var(--purple); line-height: 1;
+    }
+    .case-result-label {
+      color: #8A7EA0 !important;
+      font-size: 11px; font-weight: 300;
+      color: var(--ink-faint); line-height: 1.4; margin-top: 4px;
+    }
+
+    /* ── ABOUT / FOUNDER ── */
+    .founder {
+      background: #FFFFFF; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .founder-inner {
+      display: grid; grid-template-columns: 3fr 2fr; gap: 80px; align-items: start;
+    }
+    .founder-text {
+      color: #3D3550 !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 2.5vw, 32px);
+      font-weight: 300; line-height: 1.45;
+      color: var(--ink-soft);
+    }
+    .founder-text strong { font-weight: 600; color: var(--ink); }
+    .founder-text em { font-style: italic; color: var(--purple); }
+    .founder-name {
+      color: #8A7EA0 !important;
+      margin-top: 32px;
+      font-size: 13px; font-weight: 400;
+      color: var(--ink-faint); letter-spacing: 0.04em;
+    }
+    .founder-name strong { color: var(--ink-soft); font-weight: 500; }
+    .founder-pillars { padding-top: 12px; }
+    .pillar {
+      background: #FAFAF8;
+      padding: 24px 0; border-bottom: 1px solid var(--rule);
+    }
+    .pillar:first-child { border-top: 1px solid var(--rule); }
+    .pillar-label {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 8px;
+    }
+    .pillar-text {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.65;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--dark); padding: 96px 0;
+      position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: ''; position: absolute; top: -200px; right: -100px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(107,63,160,0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .cta-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .cta-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(34px, 4vw, 56px);
+      font-weight: 300; color: white; line-height: 1.1; margin-bottom: 20px;
+    }
+    .cta-h2 em { font-style: italic; color: var(--purple-mid); }
+    .cta-sub { font-size: 15px; font-weight: 300; color: rgba(255,255,255,0.45); line-height: 1.75; }
+    .cta-form {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 40px;
+    }
+    .form-head {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3); margin-bottom: 24px; display: block;
+    }
+    .f-input {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: white; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 300;
+      padding: 12px 16px; margin-bottom: 10px; outline: none;
+      transition: border-color .2s;
+    }
+    .f-input::placeholder { color: rgba(255,255,255,0.2); }
+    .f-input:focus { border-color: var(--purple-mid); }
+    select.f-input {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.25)' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    select.f-input option { background: #1A0A2E; }
+    .f-submit {
+      width: 100%; background: var(--purple); color: white;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 14px; border: none; cursor: pointer; margin-top: 6px;
+      transition: background .2s;
+    }
+    .f-submit:hover { background: #8B5FC0; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #040210; padding: 40px 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .footer-left {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .f-brand {
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+    }
+    .f-tagline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; font-style: italic;
+      color: rgba(255,255,255,0.5);
+    }
+    .f-email {
+      font-size: 13px; color: rgba(255,255,255,0.75);
+      text-decoration: none; transition: color .2s;
+    }
+    .f-email:hover { color: var(--purple-mid); }
+    .f-copy { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      nav { padding: 16px 24px; }
+      .hero {
+      background: var(--page); padding: 120px 24px 64px; }
+      .wrap { padding: 0 24px; }
+      .thesis-band-inner { grid-template-columns: 1fr; gap: 20px; }
+      .services-intro { grid-template-columns: 1fr; gap: 20px; }
+      .services-grid { grid-template-columns: 1fr; }
+      .case-row { grid-template-columns: 1fr; gap: 12px; }
+      .case-result { text-align: left; }
+      .founder-inner { grid-template-columns: 1fr; gap: 48px; }
+      .cta-inner { grid-template-columns: 1fr; gap: 40px; }
+      footer { flex-direction: column; align-items: flex-start; padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-main">Chiibitsu Labs</span>
+    <span class="nav-logo-sub">more human, by design</span>
+  </a>
+  <a href="https://book.chiibitsu.com" target="_blank" class="nav-cta">Work with us →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">The premise</div>
+  <h1 class="hero-h1">
+    "The future is<br>already here.<br>
+    It's just not<br>
+    <em>equally distributed."</em>
+  </h1>
+  <p class="hero-source">— William Gibson</p>
+  <p class="hero-thesis">
+    The future doesn't wait for you to be ready.<br>
+    <strong>More human, by design</strong> — at the intersection of behavior, systems thinking, and emerging technology.
+  </p>
+  <div class="hero-cta-row">
+    <a href="https://book.chiibitsu.com" target="_blank" class="btn-primary">Work with us →</a>
+    <a href="#what-we-do" class="btn-ghost">See what we do</a>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap" aria-hidden="true">
+  <div class="ticker">
+    <span class="ticker-item">Behavior Design</span>
+    <span class="ticker-item">Emerging Tech</span>
+    <span class="ticker-item">Systems Architecture</span>
+    <span class="ticker-item">AI Integration</span>
+    <span class="ticker-item">Decision Frameworks</span>
+    <span class="ticker-item">Human-Centered AI</span>
+    <span class="ticker-item">Organizational Design</span>
+    <span class="ticker-item">Investor Readiness</span>
+    <span class="ticker-item">Behavior Design</span>
+    <span class="ticker-item">Emerging Tech</span>
+    <span class="ticker-item">Systems Architecture</span>
+    <span class="ticker-item">AI Integration</span>
+    <span class="ticker-item">Decision Frameworks</span>
+    <span class="ticker-item">Human-Centered AI</span>
+    <span class="ticker-item">Organizational Design</span>
+    <span class="ticker-item">Investor Readiness</span>
+  </div>
+</div>
+
+<!-- THESIS BAND -->
+<div class="thesis-band">
+  <div class="wrap">
+    <div class="thesis-band-inner fade-up">
+      <p class="thesis-band-label">
+        What we believe
+      </p>
+      <p class="thesis-band-text">
+        AI doesn't replace humans. It removes the need for humans to <em>behave like machines.</em>
+        The real question isn't how to use AI —
+        it's <strong>who you need to become</strong> now that it's here.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<section class="services" id="what-we-do">
+  <div class="wrap">
+    <div class="services-intro fade-up">
+      <h2 class="services-h2">What<br><em>we do</em></h2>
+      <p class="services-intro-text">
+        Each area of work built on the same foundation — honest, systems-level thinking that puts the human at the center, not the technology.
+      </p>
+    </div>
+    <div class="services-grid">
+
+      <!-- 01 Strategic Consulting -->
+      <div class="s-card fade-up">
+        <div class="s-top">
+          <span class="s-badge live"><span class="dot"></span>Live</span>
+          <span class="s-num">01</span>
+        </div>
+        <h3 class="s-title">Strategic Consulting</h3>
+        <p class="s-desc">Decision architecture, behavior design, and operational systems for founders and executives navigating complexity. We tell you what you need to hear — and help you build what actually holds.</p>
+        <a href="mailto:labs@chiibitsu.com?subject=Strategic%20Consulting%20Inquiry&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="s-link">Let's talk →</a>
+      </div>
+
+      <!-- 02 AI @ Work -->
+      <div class="s-card fade-up" style="transition-delay:.08s">
+        <div class="s-top">
+          <span class="s-badge live"><span class="dot"></span>Live</span>
+          <span class="s-num">02</span>
+        </div>
+        <h3 class="s-title">AI @ Work:<br>Use Case Lab</h3>
+        <p class="s-desc">A workshop for companies ready to use AI intentionally, not randomly. We find the right use cases together, separate hype from leverage, and build a practical roadmap your team will actually use.</p>
+        <a href="https://aiatwork.chiibitsu.com" class="s-link">Book a workshop →</a>
+      </div>
+
+      <!-- 03 Lighthouse -->
+      <div class="s-card fade-up" style="transition-delay:.12s">
+        <div class="s-top">
+          <span class="s-badge live"><span class="dot"></span>Live</span>
+          <span class="s-num">03</span>
+        </div>
+        <h3 class="s-title">Lighthouse</h3>
+        <p class="s-desc">Decision architecture for founder-led companies. When decisions keep escalating to the top and the bottleneck is structural — not people — Lighthouse rebuilds the operating layer so the right calls happen at the right level.</p>
+        <a href="https://lighthouse.chiibitsu.com" class="s-link">Learn more →</a>
+      </div>
+
+      <!-- 04 Futureproof -->
+      <div class="s-card soon s-soon fade-up" style="transition-delay:.10s">
+        <div class="s-top">
+          <span class="s-badge soon"><span class="dot"></span>Coming Soon</span>
+          <span class="s-num">04</span>
+        </div>
+        <h3 class="s-title" style="color:var(--ink-soft);">Futureproof</h3>
+        <p class="s-desc">A platform for individuals navigating the AI era — discover your human edge, find your next move, and build proof of value before the world decides for you. Built for people who want to stay irreplaceable without becoming someone they're not.</p>
+        <a href="https://futureproof.chiibitsu.com" class="s-link muted">Join the waitlist →</a>
+      </div>
+
+      <!-- 05 AICOS -->
+      <div class="s-card soon s-soon fade-up" style="transition-delay:.14s">
+        <div class="s-top">
+          <span class="s-badge" style="color:#C4984A; font-size:10px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; display:flex; align-items:center; gap:6px;"><span class="dot" style="background:#C4984A;"></span>In Development</span>
+          <span class="s-num">05</span>
+        </div>
+        <h3 class="s-title" style="color:var(--ink-soft);">AICOS</h3>
+        <p class="s-desc">Your private AI Chief of Staff — an agentic system that manages your workflows, briefs you daily, flags what needs your attention, and coordinates your AI tools and human support layer before you even ask. Built for founders who need leverage, not more tasks. No code required to get started.</p>
+        <a href="https://aicos.chiibitsu.com" class="s-link muted">Express interest →</a>
+      </div>
+
+      <!-- 06 Chibie -->
+      <div class="s-card soon s-soon fade-up" style="transition-delay:.16s">
+        <div class="s-top">
+          <span class="s-badge" style="color:#C4984A; font-size:10px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; display:flex; align-items:center; gap:6px;"><span class="dot" style="background:#C4984A;"></span>In Development</span>
+          <span class="s-num">06</span>
+        </div>
+        <h3 class="s-title" style="color:var(--ink-soft);">Chibie</h3>
+        <p class="s-desc">A personal AI companion built on a 13-year vision of what trusted digital companionship could feel like. Chibie notices your patterns, holds you accountable, and nudges you to show up as the person you're becoming. Warm but firm. Not a chatbot. Something much closer.</p>
+        <a href="https://chibie.chiibitsu.com" class="s-link muted">Learn more →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CASE STUDIES -->
+<section class="cases">
+  <div class="wrap">
+    <div class="section-label fade-up">Real outcomes</div>
+    <div class="cases-grid">
+
+      <div class="case-row fade-up">
+        <div class="case-tag">Consulting +<br>Ops</div>
+        <div class="case-body">
+          <h4 class="case-title">Turned operating ambiguity into decision-ready visibility</h4>
+          <p class="case-text">A regional HRTech services company entered a high-pressure transition with revenue risk, reporting gaps, and unclear operating visibility. Chiibitsu Labs stepped in to restore cadence, protect key accounts, rebuild the financial and operating dashboard, tighten controls, and turn scattered business inputs into clearer priorities and decision-ready reporting.</p>
+        </div>
+        <div class="case-result">
+          <div class="case-result-num">+72%</div>
+          <div class="case-result-label">MoM revenue<br>recovery</div>
+        </div>
+      </div>
+
+      <div class="case-row fade-up" style="transition-delay:.08s">
+        <div class="case-tag">Behavior<br>Design</div>
+        <div class="case-body">
+          <h4 class="case-title">Built behavior systems for transformation at cohort scale</h4>
+          <p class="case-text">A fitness-based personal development program needed more than motivation to help people stay consistent. Chiibitsu Labs designed behavior scaffolds, reflection prompts, coach language, and identity-based development systems that helped participants connect daily action with personal growth, without turning the process into generic self-help.</p>
+        </div>
+        <div class="case-result">
+          <div class="case-result-num">4K+</div>
+          <div class="case-result-label">participants<br>served</div>
+        </div>
+      </div>
+
+      <div class="case-row fade-up" style="transition-delay:.12s">
+        <div class="case-tag">Product +<br>Investor</div>
+        <div class="case-body">
+          <h4 class="case-title">Translated fintech product complexity into investor-ready direction</h4>
+          <p class="case-text">An early-stage fintech venture needed to turn a complex product vision into clearer roadmap, user logic, and investor-facing narrative. Chiibitsu Labs led product direction for a crypto wallet concept, aligned roadmap decisions with development and user feedback, and personally presented to investors — making the product story sharper, more practical, and easier to believe. The round closed.</p>
+        </div>
+        <div class="case-result">
+          <div class="case-result-num">✓</div>
+          <div class="case-result-label">funding round<br>closed</div>
+        </div>
+      </div>
+
+      <div class="case-row fade-up" style="transition-delay:.16s">
+        <div class="case-tag">Emerging<br>Tech</div>
+        <div class="case-body">
+          <h4 class="case-title">Built regional execution for an AI/Web3 consumer platform</h4>
+          <p class="case-text">A regional AI and Web3 consumer platform needed to turn complex product, token, community, and market realities into clearer execution. Chiibitsu Labs helped build local operating structure, coordinate compliance-aware growth, strengthen partner activity, and prepare investor-facing narratives — opening a new market from zero.</p>
+        </div>
+        <div class="case-result">
+          <div class="case-result-num">0→1</div>
+          <div class="case-result-label">new market<br>opened</div>
+        </div>
+      </div>
+
+      <div class="case-row fade-up" style="transition-delay:.20s">
+        <div class="case-tag">AI +<br>Systems</div>
+        <div class="case-body">
+          <h4 class="case-title">Built AI-assisted workflows before AI adoption became mainstream</h4>
+          <p class="case-text">A tech-enabled mobility platform needed to coordinate bookings, customer triage, fleet matching, driver onboarding, service standards, and time-critical transport operations across fragmented supply. Chiibitsu Labs built AI-assisted chatbot and operations workflows for intake, triage, fleet coordination, GPS/RFID tracking, and manual optimization while keeping human judgment in the loop.</p>
+        </div>
+        <div class="case-result">
+          <div class="case-result-num">₱28M</div>
+          <div class="case-result-label">peak quarterly<br>revenue</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOUNDER NOTE -->
+<section class="founder">
+  <div class="wrap">
+    <div class="founder-inner">
+      <div class="fade-up">
+        <div class="section-label">The guide</div>
+        <p class="founder-text">
+          The hero of this story is you — the founder, the executive, the professional trying to stay clear while everything accelerates.
+          <br><br>
+          Chiibitsu Labs exists because <strong>the future doesn't punish the slow.</strong> It punishes the <em>unprepared.</em> And most people are being prepared for the wrong thing.
+          <br><br>
+          We don't sell tools. We don't sell hype. We build the systems and thinking that help humans stay irreplaceable — not by becoming more like machines, but by becoming <em>more themselves.</em>
+        </p>
+        <p class="founder-name">
+          Founded by <strong><a href="https://linkedin.com/in/angelinev" target="_blank" style="color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule);">Angeline "Chii" Viray</a></strong> — systems architect, behavior designer, emerging tech strategist.
+        </p>
+      </div>
+      <div class="founder-pillars fade-up" style="transition-delay:.1s">
+        <div class="pillar">
+          <div class="pillar-label">Behavior Design</div>
+          <p class="pillar-text">Systems that work with how humans actually behave — not how we wish they would.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Emerging Tech</div>
+          <p class="pillar-text">AI, automation, and what's next — applied intentionally, with human judgment at the center.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Systems Architecture</div>
+          <p class="pillar-text">Structures that hold under pressure and scale without breaking the people inside them.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Conscious Decision-Making</div>
+          <p class="pillar-text">Clarity about what matters, what to act on, and what to let go — before the world decides for you.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="work-with-us">
+  <div class="wrap">
+    <div class="cta-inner">
+      <div class="fade-up">
+        <h2 class="cta-h2">
+          Ready to build<br>
+          what you <em>actually</em><br>
+          need for what's next?
+        </h2>
+        <p class="cta-sub">Tell us where you are and what you're working on. We'll tell you honestly if and how we can help. No pitch. No pressure.</p>
+      </div>
+      <div class="cta-form fade-up" style="transition-delay:.12s">
+        <span class="form-head">Start here</span>
+        <iframe src="https://tally.so/embed/7RMK0P?alignLeft=1&hideTitle=1&dynamicHeight=1" data-tally-src="https://tally.so/embed/7RMK0P?alignLeft=1&hideTitle=1&dynamicHeight=1" loading="lazy" width="100%" height="500" frameborder="0" marginheight="0" marginwidth="0" title="Work with Chiibitsu Labs" style="border:none; min-height:500px; background:#ffffff; border-radius:6px;"></iframe>
+        <script>var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally&&Tally.loadEmbeds()};if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}else{v();}<\/script>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    <span class="f-brand">Chiibitsu Labs</span>
+    <span class="f-tagline">more human, by design</span>
+  </div>
+  <a href="mailto:labs@chiibitsu.com?subject=Hello%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%20came%20across%20Chiibitsu%20Labs%20and%20wanted%20to%20reach%20out.%0A%0A" class="f-email">labs@chiibitsu.com</a>
+  <span class="f-copy">© 2026 Chiibitsu Labs. All rights reserved.</span>
+</footer>
+
+<script>
+  // Fade-up on scroll
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
