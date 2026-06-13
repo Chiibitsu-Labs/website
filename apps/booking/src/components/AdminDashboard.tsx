@@ -178,7 +178,13 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
       headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
     });
     if (res.status === 503) { setNoDb(true); setLoading(false); return; }
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ error: 'Could not load projects. The server returned a non-JSON response.' }));
+    if (!res.ok) {
+      alert(data.error ?? 'Could not load projects. Check the Setup tab and Supabase table.');
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
     setProjects(data.projects ?? []);
     setLoading(false);
   }
@@ -203,7 +209,12 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const res = await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error ?? 'Could not load defaults. Check the Setup tab and Supabase table.');
+      return;
+    }
     load();
   }
 
@@ -297,9 +308,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 // ─── Setup Tab ────────────────────────────────────────────────────────────────
 
-const SQL_SNIPPET = `CREATE TABLE booking_projects (
+const SQL_SNIPPET = `CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS booking_projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug TEXT UNIQUE NOT NULL,
+  slug TEXT NOT NULL,
   name TEXT NOT NULL,
   company TEXT NOT NULL DEFAULT '',
   tagline TEXT NOT NULL DEFAULT '',
@@ -314,7 +327,27 @@ const SQL_SNIPPET = `CREATE TABLE booking_projects (
   calendar_id TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);`;
+);
+
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT '';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS tagline TEXT NOT NULL DEFAULT '';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS branding_color TEXT NOT NULL DEFAULT 'indigo';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS branding_emoji TEXT;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS time_slots JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS custom_fields JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS booking_window_weeks INTEGER NOT NULL DEFAULT 4;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS blocked_dates TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS calendar_id TEXT;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE booking_projects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE UNIQUE INDEX IF NOT EXISTS booking_projects_slug_unique_idx
+  ON booking_projects (slug);`;
 
 function SetupTab({ adminPassword }: { adminPassword: string }) {
   const [copied, setCopied] = useState(false);

@@ -21,15 +21,28 @@ interface ProjectRow {
   created_at: string;
 }
 
+function getSupabaseUrl() {
+  return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
+function getSupabaseServerKey() {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+    ?? process.env.SUPABASE_SERVICE_KEY
+    ?? process.env.SUPABASE_ANON_KEY
+    ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
 function getClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseUrl();
+  const key = getSupabaseServerKey();
   if (!url || !key) return null;
   return createClient(url, key);
 }
 
 export function hasDatabase(): boolean {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServerKey());
 }
 
 function rowToProject(row: ProjectRow): Project {
@@ -54,6 +67,19 @@ function rowToProject(row: ProjectRow): Project {
   };
 }
 
+function throwDbError(action: string, error: unknown): never {
+  const pgError = error as { code?: string; message?: string; details?: string; hint?: string };
+  const parts = [
+    action,
+    pgError.code ? `(${pgError.code})` : undefined,
+    pgError.message,
+    pgError.details,
+    pgError.hint ? `Hint: ${pgError.hint}` : undefined,
+  ].filter(Boolean);
+
+  throw new Error(parts.join(' — ') || action);
+}
+
 export async function getProjects(): Promise<Project[]> {
   const client = getClient();
   if (!client) return SEED_PROJECTS;
@@ -68,7 +94,9 @@ export async function getProjects(): Promise<Project[]> {
     console.error('DB getProjects error:', error);
     return SEED_PROJECTS;
   }
-  return (data ?? []).map(rowToProject);
+
+  const projects = (data ?? []).map(rowToProject);
+  return projects.length > 0 ? projects : SEED_PROJECTS;
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -84,7 +112,12 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     .eq('is_active', true)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('DB getProjectBySlug error:', error);
+    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  }
+
+  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
   return rowToProject(data);
 }
 
@@ -97,7 +130,7 @@ export async function getAllProjectsAdmin(): Promise<(Project & { isActive: bool
     .select('*')
     .order('created_at');
 
-  if (error) throw error;
+  if (error) throwDbError('Failed to load projects from Supabase', error);
   return (data ?? []).map((row: ProjectRow) => ({
     ...rowToProject(row),
     isActive: row.is_active,
@@ -144,7 +177,7 @@ export async function createProject(input: ProjectInput): Promise<Project> {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwDbError('Failed to create project in Supabase', error);
   return rowToProject(data);
 }
 
@@ -173,7 +206,7 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwDbError('Failed to update project in Supabase', error);
   return rowToProject(data);
 }
 
@@ -186,7 +219,7 @@ export async function deleteProject(slug: string): Promise<void> {
     .delete()
     .eq('slug', slug);
 
-  if (error) throw error;
+  if (error) throwDbError('Failed to delete project from Supabase', error);
 }
 
 export async function seedProjects(): Promise<void> {
@@ -194,7 +227,7 @@ export async function seedProjects(): Promise<void> {
   if (!client) throw new Error('Database not configured');
 
   for (const p of SEED_PROJECTS) {
-    await client.from('booking_projects').upsert(
+    const { error } = await client.from('booking_projects').upsert(
       {
         slug: p.slug,
         name: p.name,
@@ -211,7 +244,9 @@ export async function seedProjects(): Promise<void> {
         calendar_id: p.calendarId ?? null,
         is_active: true,
       },
-      { onConflict: 'slug', ignoreDuplicates: true },
+      { onConflict: 'slug' },
     );
+
+    if (error) throwDbError(`Failed to seed "${p.name}" in Supabase`, error);
   }
 }

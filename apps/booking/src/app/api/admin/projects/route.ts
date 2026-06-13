@@ -13,8 +13,13 @@ export async function GET(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!hasDatabase()) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
 
-  const projects = await getAllProjectsAdmin();
-  return NextResponse.json({ projects });
+  try {
+    const projects = await getAllProjectsAdmin();
+    return NextResponse.json({ projects });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to load projects';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

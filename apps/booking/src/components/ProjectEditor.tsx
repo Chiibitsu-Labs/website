@@ -166,7 +166,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ error: 'Save failed. The server returned a non-JSON response.' }));
     if (!res.ok) { setError(data.error ?? 'Save failed'); setSaving(false); return; }
 
     onSave();
