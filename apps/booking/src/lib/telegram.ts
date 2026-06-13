@@ -2,7 +2,8 @@ export function hasTelegram(): boolean {
   return !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
-export async function sendAfternoonAlert({
+export async function sendApprovalRequest({
+  bookingToken,
   bookerName,
   bookerEmail,
   bookerPhone,
@@ -12,8 +13,9 @@ export async function sendAfternoonAlert({
   timeLabel,
   endLabel,
   customFields,
-  eventLink,
+  baseUrl,
 }: {
+  bookingToken: string;
   bookerName: string;
   bookerEmail: string;
   bookerPhone?: string;
@@ -23,11 +25,14 @@ export async function sendAfternoonAlert({
   timeLabel: string;
   endLabel: string;
   customFields: Record<string, string>;
-  eventLink?: string;
+  baseUrl: string;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return;
+
+  const approveUrl = `${baseUrl}/api/booking-approval?token=${encodeURIComponent(bookingToken)}&action=approve`;
+  const rejectUrl = `${baseUrl}/api/booking-approval?token=${encodeURIComponent(bookingToken)}&action=reject`;
 
   const extraLines = [
     bookerPhone ? `📱 ${bookerPhone}` : null,
@@ -40,18 +45,14 @@ export async function sendAfternoonAlert({
     .join('\n');
 
   const text =
-    `🔔 *Both slots booked — heads up!*\n\n` +
+    `⏳ *Afternoon booking needs your approval*\n\n` +
     `📌 ${projectName}\n` +
     `📅 ${dateLabel}\n` +
-    `🕐 Afternoon: ${timeLabel} – ${endLabel}\n\n` +
+    `🕐 ${timeLabel} – ${endLabel}\n\n` +
     `👤 ${bookerName}\n` +
     `📧 ${bookerEmail}` +
     (extraLines ? `\n${extraLines}` : '') +
-    `\n\n_Morning AND afternoon are now booked on this day._`;
-
-  const buttons = eventLink
-    ? { reply_markup: { inline_keyboard: [[{ text: '📅 View in Calendar', url: eventLink }]] } }
-    : {};
+    `\n\n_Morning slot already booked on this day. Tap to approve or reject._`;
 
   await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
@@ -60,7 +61,12 @@ export async function sendAfternoonAlert({
       chat_id: chatId,
       text,
       parse_mode: 'Markdown',
-      ...buttons,
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✅ Approve', url: approveUrl },
+          { text: '❌ Reject', url: rejectUrl },
+        ]],
+      },
     }),
   });
 }

@@ -43,9 +43,6 @@ export interface Project {
   blockedDates?: string[];
   // How many weeks ahead can someone book?
   bookingWindowWeeks: number;
-  // If true, afternoon slots (startHour >= 12) require Chii's approval via Telegram
-  // when the morning slot on the same day is already booked.
-  afternoonRequiresApproval?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +70,6 @@ export const SEED_PROJECTS: Project[] = [
       // Tuesday and Wednesday, 1 PM–5 PM (afternoon session)
       { days: [2, 3], startHour: 13, startMinute: 0 },
     ],
-    afternoonRequiresApproval: true,
     customFields: [
       {
         id: 'company_name',
