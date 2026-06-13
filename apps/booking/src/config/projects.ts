@@ -86,6 +86,13 @@ export const SEED_PROJECTS: Project[] = [
         required: true,
       },
       {
+        id: 'department',
+        label: 'Department or team attending (optional)',
+        type: 'text',
+        required: false,
+        placeholder: 'e.g. Operations, HR, Product…',
+      },
+      {
         id: 'use_case_focus',
         label: 'What area of your business are you hoping to improve with AI?',
         type: 'textarea',
