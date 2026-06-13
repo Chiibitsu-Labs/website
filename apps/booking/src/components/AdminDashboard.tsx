@@ -179,6 +179,12 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     });
     if (res.status === 503) { setNoDb(true); setLoading(false); return; }
     const data = await res.json();
+    if (!res.ok) {
+      alert(data.error ?? 'Could not load projects. Check the Setup tab and Supabase table.');
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
     setProjects(data.projects ?? []);
     setLoading(false);
   }
@@ -203,7 +209,12 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const res = await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error ?? 'Could not load defaults. Check the Setup tab and Supabase table.');
+      return;
+    }
     load();
   }
 
