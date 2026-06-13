@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjectBySlug } from '@/lib/db';
 import { getAvailableSlots } from '@/lib/google-calendar';
 import { parseISO, isValid, isBefore, startOfDay, addWeeks } from 'date-fns';
+import { SEED_PROJECTS } from '@/config/projects';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing slug or date' }, { status: 400 });
   }
 
-  const project = await getProjectBySlug(slug);
+  const project =
+    (await getProjectBySlug(slug)) ?? SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }

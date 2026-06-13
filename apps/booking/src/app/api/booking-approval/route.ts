@@ -7,6 +7,7 @@ import {
   sendRejectionEmail,
   sendBookingNotificationToAdmin,
 } from '@/lib/email';
+import { SEED_PROJECTS } from '@/config/projects';
 
 function page(icon: string, heading: string, body: string) {
   return new NextResponse(
@@ -48,7 +49,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const project = await getProjectBySlug(payload.projectSlug);
+  const project =
+    (await getProjectBySlug(payload.projectSlug)) ??
+    SEED_PROJECTS.find((p) => p.slug === payload.projectSlug) ??
+    null;
   if (!project) {
     return page('❓', 'Project not found', 'Could not find the project for this booking.');
   }

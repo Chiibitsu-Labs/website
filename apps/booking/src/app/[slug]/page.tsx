@@ -1,17 +1,23 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { siteConfig } from '@/config/projects';
+import { SEED_PROJECTS, siteConfig } from '@/config/projects';
 import { getProjectBySlug } from '@/lib/db';
 import { BookingFlow } from '@/components/BookingFlow';
 import { formatDuration } from '@/lib/utils';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: { slug: string };
 }
 
+async function getPublicProjectBySlug(slug: string) {
+  return (await getProjectBySlug(slug)) ?? SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const project = await getProjectBySlug(params.slug);
+  const project = await getPublicProjectBySlug(params.slug);
   if (!project) return {};
   return {
     title: `Book: ${project.name}`,
@@ -20,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BookPage({ params }: Props) {
-  const project = await getProjectBySlug(params.slug);
+  const project = await getPublicProjectBySlug(params.slug);
   if (!project) notFound();
 
   const headerColors: Record<string, string> = {
