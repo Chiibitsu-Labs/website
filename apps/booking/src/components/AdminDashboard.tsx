@@ -179,12 +179,6 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     });
     if (res.status === 503) { setNoDb(true); setLoading(false); return; }
     const data = await res.json();
-    if (!res.ok) {
-      alert(data.error ?? 'Could not load projects. Check the Setup tab and Supabase table.');
-      setProjects([]);
-      setLoading(false);
-      return;
-    }
     setProjects(data.projects ?? []);
     setLoading(false);
   }
@@ -209,12 +203,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    const res = await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error ?? 'Could not load defaults. Check the Setup tab and Supabase table.');
-      return;
-    }
+    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
     load();
   }
 
@@ -259,9 +248,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-white font-bold text-xl">Booking Projects</h2>
         <div className="flex gap-2">
-          <button onClick={handleSeed} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl text-sm transition">
-            Load defaults
-          </button>
+          {projects!.length === 0 && (
+            <button onClick={handleSeed} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl text-sm transition">
+              Load defaults
+            </button>
+          )}
           <button
             onClick={() => setEditing('new')}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition"
@@ -337,7 +328,7 @@ function SetupTab({ adminPassword }: { adminPassword: string }) {
 
   const callbackUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/api/auth/google/callback`
-    : 'https://book.chiibitsu.com/api/auth/google/callback';
+    : 'https://booking.chiibitsu.com/api/auth/google/callback';
 
   return (
     <div className="max-w-2xl space-y-6">

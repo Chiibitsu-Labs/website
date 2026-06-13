@@ -1,6 +1,6 @@
 # Chiibitsu Labs — Custom Booking Calendar
 
-A branded, multi-project booking calendar that lives at **book.chiibitsu.com**.
+A branded, multi-project booking calendar that lives at **booking.chiibitsu.com**.
 
 ---
 
@@ -51,7 +51,7 @@ Follow the browser prompt. Paste the printed `GOOGLE_REFRESH_TOKEN` into your `.
 
 ```
 ADMIN_PASSWORD=choose-a-strong-password
-NEXT_PUBLIC_BASE_URL=https://book.chiibitsu.com
+NEXT_PUBLIC_BASE_URL=https://booking.chiibitsu.com
 ADMIN_EMAIL=chii@chiibitsu.com
 ```
 
@@ -68,9 +68,9 @@ ADMIN_EMAIL=chii@chiibitsu.com
 7. Deploy — it'll build and go live
 
 **Add the subdomain:**
-- In DigitalOcean App settings, add the domain `book.chiibitsu.com`
+- In DigitalOcean App settings, add the domain `booking.chiibitsu.com`
 - In your DNS (wherever chiibitsu.com is managed), add a CNAME record:
-  `book → <your-do-app-url>.ondigitalocean.app`
+  `booking → <your-do-app-url>.ondigitalocean.app`
 
 ---
 

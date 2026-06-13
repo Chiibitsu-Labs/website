@@ -210,7 +210,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
                 />
               </Field>
               {isNew && (
-                <Field label="URL slug" hint={`book.chiibitsu.com/${form.slug || 'your-slug'}`}>
+                <Field label="URL slug" hint={`booking.chiibitsu.com/${form.slug || 'your-slug'}`}>
                   <Input value={form.slug} onChange={(v) => setField('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} placeholder="ai-at-work" />
                 </Field>
               )}

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: `%s — ${siteConfig.brandName}`,
   },
   description: `Book a session with ${siteConfig.ownerName} at ${siteConfig.brandName}`,
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://book.chiibitsu.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://booking.chiibitsu.com'),
 };
 
 export default function RootLayout({

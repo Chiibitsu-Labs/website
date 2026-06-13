@@ -10,7 +10,6 @@ import { createPendingToken } from '@/lib/pending-token';
 import { sendApprovalRequest, hasTelegram } from '@/lib/telegram';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { SEED_PROJECTS } from '@/config/projects';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -32,8 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const project =
-      (await getProjectBySlug(slug)) ?? SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+    const project = await getProjectBySlug(slug);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
