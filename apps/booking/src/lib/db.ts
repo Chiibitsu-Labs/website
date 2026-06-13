@@ -68,7 +68,8 @@ export async function getProjects(): Promise<Project[]> {
     console.error('DB getProjects error:', error);
     return SEED_PROJECTS;
   }
-  return (data ?? []).map(rowToProject);
+  const rows = (data ?? []).map(rowToProject);
+  return rows.length > 0 ? rows : SEED_PROJECTS;
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
