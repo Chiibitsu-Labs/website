@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjectBySlug } from '@/lib/db';
 import { createBookingEvent, getAvailableSlots } from '@/lib/google-calendar';
 import { sendBookingConfirmationToBooker, sendBookingNotificationToAdmin } from '@/lib/email';
+import { sendAfternoonAlert, hasTelegram } from '@/lib/telegram';
+import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+
+const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,11 +59,43 @@ export async function POST(req: NextRequest) {
 
     const { eventLink } = await createBookingEvent(booking, project.calendarId);
 
-    // Fire emails concurrently, don't fail the booking if email fails
     await Promise.allSettled([
       sendBookingConfirmationToBooker(booking, project, eventLink),
       sendBookingNotificationToAdmin(booking, project, eventLink),
     ]);
+
+    // ── Afternoon alert to Chii ───────────────────────────────────────────────
+    // If the project flags afternoon slots, check if morning was already taken.
+    // If so, send a Telegram heads-up (booking is already confirmed above).
+    if (project.afternoonRequiresApproval && hasTelegram()) {
+      const utcHour = new Date(startISO).getUTCHours();
+      const manilaHour = (utcHour + 8) % 24;
+
+      if (manilaHour >= 12) {
+        const morningBooked = slots.some((s) => {
+          const sHour = (new Date(s.startISO).getUTCHours() + 8) % 24;
+          return sHour < 12 && !s.available;
+        });
+
+        if (morningBooked) {
+          const zonedStart = toZonedTime(new Date(startISO), TIMEZONE);
+          const zonedEnd = toZonedTime(new Date(endISO), TIMEZONE);
+          sendAfternoonAlert({
+            bookerName: name,
+            bookerEmail: email,
+            bookerPhone: phone,
+            bookerCompany: company,
+            projectName: project.name,
+            dateLabel: format(zonedStart, 'EEE, MMM d, yyyy'),
+            timeLabel: format(zonedStart, 'h:mm a'),
+            endLabel: format(zonedEnd, 'h:mm a'),
+            customFields,
+            eventLink,
+          }).catch(() => {});
+        }
+      }
+    }
+    // ── End afternoon alert ───────────────────────────────────────────────────
 
     return NextResponse.json({
       success: true,
