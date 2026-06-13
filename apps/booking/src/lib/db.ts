@@ -84,7 +84,11 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     .eq('is_active', true)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('DB getProjectBySlug error:', error);
+    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  }
+  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
   return rowToProject(data);
 }
 
