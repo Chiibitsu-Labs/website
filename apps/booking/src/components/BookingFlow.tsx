@@ -6,7 +6,7 @@ import type { Project } from '@/config/projects';
 import { formatDuration } from '@/lib/utils';
 import type { TimeSlot } from '@/lib/google-calendar';
 
-type Step = 'calendar' | 'timeslot' | 'form' | 'submitting' | 'done';
+type Step = 'calendar' | 'timeslot' | 'form' | 'submitting' | 'done' | 'pending';
 
 interface FormData {
   name: string;
@@ -210,6 +210,11 @@ export function BookingFlow({ project }: Props) {
       if (!res.ok) {
         setSubmitError(data.error ?? 'Something went wrong');
         setStep('form');
+        return;
+      }
+
+      if (data.pendingApproval) {
+        setStep('pending');
         return;
       }
 
@@ -503,6 +508,36 @@ export function BookingFlow({ project }: Props) {
       <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
         <div className="w-10 h-10 border-3 border-gray-200 border-t-gray-700 rounded-full animate-spin mb-4" />
         <p className="text-gray-500 text-sm">Booking your slot…</p>
+      </div>
+    );
+  }
+
+  // ─── STEP: Pending approval ───────────────────────────────────────────────
+  if (step === 'pending' && selectedSlot && selectedDate) {
+    return (
+      <div className="text-center animate-slide-up">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-1">Request received!</h3>
+        <p className="text-gray-500 text-sm mb-6">
+          Chii will confirm your booking within <strong>24 hours</strong>.<br/>
+          Check your email for updates.
+        </p>
+        <div className="bg-gray-50 rounded-2xl p-5 text-left mb-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{project.name}</p>
+          <p className="text-base font-semibold text-gray-900">
+            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+          </p>
+          <p className="text-gray-600 text-sm mt-0.5">
+            {selectedSlot.label} – {selectedSlot.endLabel}
+          </p>
+        </div>
+        <a href="/" className="text-sm text-gray-500 hover:text-gray-700 underline">
+          Back to home
+        </a>
       </div>
     );
   }

@@ -65,10 +65,10 @@ export const SEED_PROJECTS: Project[] = [
       emoji: '⚡',
     },
     timeSlots: [
-      // Tuesday and Thursday, 9 AM–1 PM session
-      { days: [2, 4], startHour: 9, startMinute: 0 },
-      // Tuesday and Thursday, 1 PM–5 PM session
-      { days: [2, 4], startHour: 13, startMinute: 0 },
+      // Tuesday and Wednesday, 9 AM–1 PM (morning session)
+      { days: [2, 3], startHour: 9, startMinute: 0 },
+      // Tuesday and Wednesday, 1 PM–5 PM (afternoon session)
+      { days: [2, 3], startHour: 13, startMinute: 0 },
     ],
     customFields: [
       {
@@ -84,6 +84,13 @@ export const SEED_PROJECTS: Project[] = [
         type: 'select',
         options: ['1–5', '6–15', '16–30', '30+'],
         required: true,
+      },
+      {
+        id: 'department',
+        label: 'Department or team attending (optional)',
+        type: 'text',
+        required: false,
+        placeholder: 'e.g. Operations, HR, Product…',
       },
       {
         id: 'use_case_focus',

@@ -135,6 +135,14 @@ export async function createBookingEvent(
   const zonedStart = toZonedTime(new Date(booking.startISO), TIMEZONE);
   const zonedEnd = toZonedTime(new Date(booking.endISO), TIMEZONE);
 
+  // Build event title: [Project Name] Company - Department (department optional)
+  const company =
+    booking.customFields.company_name || booking.bookerCompany || booking.bookerName;
+  const department = booking.customFields.department;
+  const eventSummary = department
+    ? `[${booking.projectName}] ${company} - ${department}`
+    : `[${booking.projectName}] ${company}`;
+
   const customFieldsText = Object.entries(booking.customFields)
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}: ${v}`)
@@ -157,8 +165,9 @@ export async function createBookingEvent(
 
   const event = await calendar.events.insert({
     calendarId: calId,
+    sendUpdates: 'all',
     requestBody: {
-      summary: `[${booking.projectName}] ${booking.bookerName}`,
+      summary: eventSummary,
       description: descriptionParts,
       start: {
         dateTime: booking.startISO,
