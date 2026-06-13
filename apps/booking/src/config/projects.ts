@@ -156,7 +156,7 @@ export const SEED_PROJECTS: Project[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const siteConfig = {
-  ownerName: 'Chiibitsu Labs',
+  ownerName: 'Chii',
   brandName: 'Chiibitsu Labs',
   tagline: 'Book a session',
   timezone: process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila',

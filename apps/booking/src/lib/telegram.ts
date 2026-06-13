@@ -45,14 +45,14 @@ export async function sendApprovalRequest({
     .join('\n');
 
   const text =
-    `⏳ *New booking — approval needed*\n\n` +
+    `⏳ *Afternoon booking needs your approval*\n\n` +
     `📌 ${projectName}\n` +
     `📅 ${dateLabel}\n` +
     `🕐 ${timeLabel} – ${endLabel}\n\n` +
     `👤 ${bookerName}\n` +
     `📧 ${bookerEmail}` +
     (extraLines ? `\n${extraLines}` : '') +
-    `\n\n_Tap below to approve or reject._`;
+    `\n\n_Morning slot already booked on this day. Tap to approve or reject._`;
 
   await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',

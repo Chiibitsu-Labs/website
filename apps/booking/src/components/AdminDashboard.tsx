@@ -25,12 +25,11 @@ function LoginScreen({ onLogin }: { onLogin: (email: string, password: string) =
     const res = await fetch('/api/admin/bookings', {
       headers: { 'x-admin-email': email, 'x-admin-password': password },
     });
-    if (res.status === 401) {
+    if (res.ok) {
+      onLogin(email, password);
+    } else {
       setError('Incorrect email or password.');
       setLoading(false);
-    } else {
-      // Any non-401 response (200 or even 500 from GCal not configured) means auth passed
-      onLogin(email, password);
     }
   }
 

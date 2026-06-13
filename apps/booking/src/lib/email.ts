@@ -104,8 +104,8 @@ export async function sendPendingBookingToBooker(
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
-      <p style="font-size:14px;color:#374151;">Your booking request has been received and is being reviewed by Chiibitsu Labs.</p>
-      <p style="font-size:14px;color:#374151;">You'll hear back within <strong>24 hours</strong>. If confirmed, you'll get a full confirmation email with a calendar invite.</p>
+      <p style="font-size:14px;color:#374151;">Your afternoon session request has been received. The morning session on this day is already booked, so your slot needs a quick confirmation from Chii.</p>
+      <p style="font-size:14px;color:#374151;">You'll hear back within <strong>24 hours</strong>. If approved, you'll get a full confirmation email with a calendar invite.</p>
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Questions? Reply to this email.</p>
     </div>
   </div>
@@ -143,7 +143,7 @@ export async function sendApprovalConfirmation(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
       </div>
-      <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your booking has been confirmed by Chiibitsu Labs.</p>
+      <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your afternoon session has been approved and confirmed.</p>
       ${eventLink ? `<a href="${eventLink}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>` : ''}
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you need to reschedule or cancel, just reply to this email.</p>
     </div>
@@ -182,7 +182,7 @@ export async function sendRejectionEmail(
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
-      <p style="font-size:14px;color:#374151;">Unfortunately we're unable to confirm this booking. You're welcome to pick a different date — we'd love to find a time that works!</p>
+      <p style="font-size:14px;color:#374151;">Unfortunately we can't confirm the afternoon slot for this date. You're welcome to pick a different date — we'd love to find a time that works!</p>
       <p style="font-size:14px;"><a href="${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/${project.slug}" style="color:#4f46e5;">Book another date →</a></p>
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Questions? Just reply to this email.</p>
     </div>
