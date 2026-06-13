@@ -80,10 +80,10 @@ export const SEED_PROJECTS: Project[] = [
       },
       {
         id: 'team_size',
-        label: 'Estimated team size attending',
-        type: 'select',
-        options: ['1–5', '6–15', '16–30', '30+'],
+        label: 'Number of attendees (minimum 10 seats)',
+        type: 'text',
         required: true,
+        placeholder: 'e.g. 12',
       },
       {
         id: 'department',
