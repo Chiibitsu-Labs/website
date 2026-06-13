@@ -201,7 +201,7 @@ export function BookingFlow({ project }: Props) {
           name: form.name,
           email: form.email,
           phone: form.phone,
-          company: form.company,
+          company: form.customFields.company_name || form.company,
           customFields: form.customFields,
         }),
       });
@@ -431,15 +431,18 @@ export function BookingFlow({ project }: Props) {
             />
           </Field>
 
-          <Field label="Company / Organisation" error={formErrors.company}>
-            <input
-              type="text"
-              value={form.company}
-              onChange={(e) => setForm({ ...form, company: e.target.value })}
-              placeholder="Where are you from?"
-              className="input-field"
-            />
-          </Field>
+          {/* Hide core company field if project has its own company_name custom field */}
+          {!project.customFields.some((f) => f.id === 'company_name') && (
+            <Field label="Company / Organisation" error={formErrors.company}>
+              <input
+                type="text"
+                value={form.company}
+                onChange={(e) => setForm({ ...form, company: e.target.value })}
+                placeholder="Where are you from?"
+                className="input-field"
+              />
+            </Field>
+          )}
 
           {/* Custom fields */}
           {project.customFields.map((field) => (
