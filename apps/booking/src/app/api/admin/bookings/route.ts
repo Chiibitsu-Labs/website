@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUpcomingBookings } from '@/lib/google-calendar';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const password = searchParams.get('password');
+function checkAuth(req: NextRequest) {
+  const password = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('password');
+  const email = req.headers.get('x-admin-email') ?? req.nextUrl.searchParams.get('email');
+  const validPassword = password === process.env.ADMIN_PASSWORD;
+  const validEmail = !process.env.ADMIN_EMAIL || email === process.env.ADMIN_EMAIL;
+  return validPassword && validEmail;
+}
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+export async function GET(req: NextRequest) {
+  if (!checkAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

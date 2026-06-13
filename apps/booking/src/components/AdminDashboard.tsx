@@ -10,21 +10,25 @@ type AdminProject = Project & { isActive: boolean; id: string };
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
-function LoginScreen({ onLogin }: { onLogin: (password: string) => void }) {
+function LoginScreen({ onLogin }: { onLogin: (email: string, password: string) => void }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (!email || !password) { setError('Please enter your email and password.'); return; }
     setLoading(true);
     setError('');
 
-    const res = await fetch(`/api/admin/bookings?password=${encodeURIComponent(password)}`);
+    const res = await fetch('/api/admin/bookings', {
+      headers: { 'x-admin-email': email, 'x-admin-password': password },
+    });
     if (res.ok) {
-      onLogin(password);
+      onLogin(email, password);
     } else {
-      setError('Incorrect password');
+      setError('Incorrect email or password.');
       setLoading(false);
     }
   }
@@ -32,14 +36,24 @@ function LoginScreen({ onLogin }: { onLogin: (password: string) => void }) {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm">
-        <h1 className="text-white font-bold text-xl mb-1">Admin</h1>
-        <p className="text-gray-400 text-sm mb-6">Enter your admin password</p>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">Chiibitsu Labs</p>
+        <h1 className="text-white font-bold text-2xl mb-1">Admin</h1>
+        <p className="text-gray-500 text-sm mb-6">Sign in to manage your bookings</p>
+        <form onSubmit={handleLogin} className="space-y-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            autoComplete="email"
+            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
+            autoComplete="current-password"
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -48,7 +62,7 @@ function LoginScreen({ onLogin }: { onLogin: (password: string) => void }) {
             disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm transition disabled:opacity-50"
           >
-            {loading ? 'Checking…' : 'Log in'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </div>
@@ -59,11 +73,12 @@ function LoginScreen({ onLogin }: { onLogin: (password: string) => void }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export function AdminDashboard() {
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [tab, setTab] = useState<Tab>('bookings');
 
   if (!adminPassword) {
-    return <LoginScreen onLogin={setAdminPassword} />;
+    return <LoginScreen onLogin={(e, p) => { setAdminEmail(e); setAdminPassword(p); }} />;
   }
 
   return (
@@ -86,8 +101,8 @@ export function AdminDashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-        {tab === 'bookings' && <BookingsTab adminPassword={adminPassword} />}
-        {tab === 'projects' && <ProjectsTab adminPassword={adminPassword} />}
+        {tab === 'bookings' && <BookingsTab adminEmail={adminEmail} adminPassword={adminPassword} />}
+        {tab === 'projects' && <ProjectsTab adminEmail={adminEmail} adminPassword={adminPassword} />}
         {tab === 'setup' && <SetupTab adminPassword={adminPassword} />}
       </main>
     </div>
@@ -96,14 +111,16 @@ export function AdminDashboard() {
 
 // ─── Bookings Tab ─────────────────────────────────────────────────────────────
 
-function BookingsTab({ adminPassword }: { adminPassword: string }) {
+function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [filterSlug, setFilterSlug] = useState('all');
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`/api/admin/bookings?password=${encodeURIComponent(adminPassword)}`);
+    const res = await fetch('/api/admin/bookings', {
+      headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+    });
     const data = await res.json();
     setBookings(data.bookings ?? []);
     setLoading(false);
@@ -148,7 +165,7 @@ function BookingsTab({ adminPassword }: { adminPassword: string }) {
 
 // ─── Projects Tab ─────────────────────────────────────────────────────────────
 
-function ProjectsTab({ adminPassword }: { adminPassword: string }) {
+function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProject | 'new' | null>(null);
@@ -157,7 +174,7 @@ function ProjectsTab({ adminPassword }: { adminPassword: string }) {
   async function load() {
     setLoading(true);
     const res = await fetch('/api/admin/projects', {
-      headers: { 'x-admin-password': adminPassword },
+      headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
     });
     if (res.status === 503) { setNoDb(true); setLoading(false); return; }
     const data = await res.json();
@@ -168,7 +185,7 @@ function ProjectsTab({ adminPassword }: { adminPassword: string }) {
   async function toggleActive(p: AdminProject) {
     await fetch(`/api/admin/projects/${p.slug}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+      headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
       body: JSON.stringify({ isActive: !p.isActive }),
     });
     load();
@@ -178,14 +195,14 @@ function ProjectsTab({ adminPassword }: { adminPassword: string }) {
     if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
     await fetch(`/api/admin/projects/${p.slug}`, {
       method: 'DELETE',
-      headers: { 'x-admin-password': adminPassword },
+      headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
     });
     load();
   }
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    await fetch(`/api/admin/seed?password=${encodeURIComponent(adminPassword)}`, { method: 'POST' });
+    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
     load();
   }
 
@@ -220,6 +237,7 @@ function ProjectsTab({ adminPassword }: { adminPassword: string }) {
       {editing && (
         <ProjectEditor
           project={editing === 'new' ? undefined : editing}
+          adminEmail={adminEmail}
           adminPassword={adminPassword}
           onSave={() => { setEditing(null); load(); }}
           onCancel={() => setEditing(null)}
