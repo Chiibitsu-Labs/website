@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { seedProjects, hasDatabase } from '@/lib/db';
 
-export async function POST(req: NextRequest) {
+function checkAuth(req: NextRequest) {
   const password = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('password');
-  if (password !== process.env.ADMIN_PASSWORD) {
+  const email = req.headers.get('x-admin-email') ?? req.nextUrl.searchParams.get('email');
+  const validPassword = password === process.env.ADMIN_PASSWORD;
+  const validEmail = !process.env.ADMIN_EMAIL || email === process.env.ADMIN_EMAIL;
+  return validPassword && validEmail;
+}
+
+export async function POST(req: NextRequest) {
+  if (!checkAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   if (!hasDatabase()) {

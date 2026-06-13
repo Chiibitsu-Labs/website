@@ -72,12 +72,13 @@ function generateSlug(name: string): string {
 
 interface Props {
   project?: Project & { isActive?: boolean };
+  adminEmail: string;
   adminPassword: string;
   onSave: () => void;
   onCancel: () => void;
 }
 
-export function ProjectEditor({ project, adminPassword, onSave, onCancel }: Props) {
+export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCancel }: Props) {
   const isNew = !project;
   const [form, setForm] = useState<FormState>(projectToForm(project));
   const [saving, setSaving] = useState(false);
@@ -161,7 +162,7 @@ export function ProjectEditor({ project, adminPassword, onSave, onCancel }: Prop
 
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+      headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
       body: JSON.stringify(payload),
     });
 
