@@ -203,7 +203,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const res = await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Seed failed: ${body.error ?? res.statusText}\n\nMake sure the booking_projects table exists in Supabase. Go to the Setup tab for the SQL to create it.`);
+    }
     load();
   }
 

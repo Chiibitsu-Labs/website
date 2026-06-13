@@ -199,7 +199,7 @@ export async function seedProjects(): Promise<void> {
   if (!client) throw new Error('Database not configured');
 
   for (const p of SEED_PROJECTS) {
-    await client.from('booking_projects').upsert(
+    const { error } = await client.from('booking_projects').upsert(
       {
         slug: p.slug,
         name: p.name,
@@ -216,7 +216,8 @@ export async function seedProjects(): Promise<void> {
         calendar_id: p.calendarId ?? null,
         is_active: true,
       },
-      { onConflict: 'slug', ignoreDuplicates: true },
+      { onConflict: 'slug' },
     );
+    if (error) throw new Error(`Seed failed for "${p.slug}": ${error.message}`);
   }
 }
