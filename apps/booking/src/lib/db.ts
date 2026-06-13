@@ -68,7 +68,9 @@ export async function getProjects(): Promise<Project[]> {
     console.error('DB getProjects error:', error);
     return SEED_PROJECTS;
   }
-  return (data ?? []).map(rowToProject);
+
+  const projects = (data ?? []).map(rowToProject);
+  return projects.length > 0 ? projects : SEED_PROJECTS;
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -194,7 +196,7 @@ export async function seedProjects(): Promise<void> {
   if (!client) throw new Error('Database not configured');
 
   for (const p of SEED_PROJECTS) {
-    await client.from('booking_projects').upsert(
+    const { error } = await client.from('booking_projects').upsert(
       {
         slug: p.slug,
         name: p.name,
@@ -211,7 +213,9 @@ export async function seedProjects(): Promise<void> {
         calendar_id: p.calendarId ?? null,
         is_active: true,
       },
-      { onConflict: 'slug', ignoreDuplicates: true },
+      { onConflict: 'slug' },
     );
+
+    if (error) throw error;
   }
 }
