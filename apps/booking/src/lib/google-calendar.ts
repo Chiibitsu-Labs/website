@@ -198,6 +198,12 @@ export async function createBookingEvent(
   };
 }
 
+export async function cancelBookingEvent(eventId: string, calendarId?: string): Promise<void> {
+  const calendar = getCalendarClient();
+  const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  await calendar.events.delete({ calendarId: calId, eventId, sendUpdates: 'all' });
+}
+
 export interface AdminBooking {
   eventId: string;
   projectSlug: string;

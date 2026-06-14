@@ -2,6 +2,18 @@ export function hasTelegram(): boolean {
   return !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
+export async function sendSimpleMessage(text: string) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) return;
+
+  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+  }).catch((e) => console.error('Telegram sendSimpleMessage error:', e));
+}
+
 export async function sendApprovalRequest({
   bookingToken,
   bookerName,
@@ -14,6 +26,8 @@ export async function sendApprovalRequest({
   endLabel,
   customFields,
   baseUrl,
+  isReschedule,
+  originalDateLabel,
 }: {
   bookingToken: string;
   bookerName: string;
@@ -26,6 +40,8 @@ export async function sendApprovalRequest({
   endLabel: string;
   customFields: Record<string, string>;
   baseUrl: string;
+  isReschedule?: boolean;
+  originalDateLabel?: string;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -44,10 +60,18 @@ export async function sendApprovalRequest({
     .filter(Boolean)
     .join('\n');
 
+  const header = isReschedule
+    ? `🔄 *Reschedule request — approval needed*`
+    : `⏳ *New booking — approval needed*`;
+
+  const dateSection = isReschedule && originalDateLabel
+    ? `📅 *New date:* ${dateLabel}\n↩️ *Was:* ${originalDateLabel}`
+    : `📅 ${dateLabel}`;
+
   const text =
-    `⏳ *New booking — approval needed*\n\n` +
+    `${header}\n\n` +
     `📌 ${projectName}\n` +
-    `📅 ${dateLabel}\n` +
+    `${dateSection}\n` +
     `🕐 ${timeLabel} – ${endLabel}\n\n` +
     `👤 ${bookerName}\n` +
     `📧 ${bookerEmail}` +

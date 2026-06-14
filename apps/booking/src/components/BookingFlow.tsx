@@ -103,11 +103,21 @@ function getStyles(color: string) {
   return colorStyles[color] ?? colorStyles.indigo;
 }
 
-interface Props {
-  project: Project;
+interface Prefill {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  customFields: Record<string, string>;
 }
 
-export function BookingFlow({ project }: Props) {
+interface Props {
+  project: Project;
+  rescheduleToken?: string;
+  prefill?: Prefill;
+}
+
+export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   const styles = getStyles(project.branding.primaryColor);
   const [step, setStep] = useState<Step>('calendar');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -116,11 +126,11 @@ export function BookingFlow({ project }: Props) {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [form, setForm] = useState<FormData>({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    customFields: {},
+    name: prefill?.name ?? '',
+    email: prefill?.email ?? '',
+    phone: prefill?.phone ?? '',
+    company: prefill?.company ?? '',
+    customFields: prefill?.customFields ?? {},
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
@@ -203,6 +213,7 @@ export function BookingFlow({ project }: Props) {
           phone: form.phone,
           company: form.customFields.company_name || form.company,
           customFields: form.customFields,
+          ...(rescheduleToken ? { rescheduleToken } : {}),
         }),
       });
 
