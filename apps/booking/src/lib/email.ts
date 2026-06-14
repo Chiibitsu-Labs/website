@@ -10,6 +10,17 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+function buildAddToCalendarUrl(booking: BookingDetails, projectName: string): string {
+  const fmt = (iso: string) =>
+    iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '').replace('Z', 'Z');
+  const company = booking.customFields.company_name || booking.bookerCompany || booking.bookerName;
+  const department = booking.customFields.department;
+  const title = department
+    ? `[${projectName}] ${company} - ${department}`
+    : `[${projectName}] ${company}`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(booking.startISO)}/${fmt(booking.endISO)}`;
+}
+
 function formatDateTime(isoString: string) {
   const zoned = toZonedTime(new Date(isoString), TIMEZONE);
   return {
@@ -22,9 +33,10 @@ function formatDateTime(isoString: string) {
 export async function sendBookingConfirmationToBooker(
   booking: BookingDetails,
   project: Project,
-  eventLink: string,
+  _eventLink: string,
 ) {
   const resend = getResend();
+  const addToCalUrl = buildAddToCalendarUrl(booking, project.name);
   const from = formatDateTime(booking.startISO);
   const to = formatDateTime(booking.endISO);
 
@@ -64,7 +76,7 @@ export async function sendBookingConfirmationToBooker(
         ${customFieldsHtml}
       </table>
 
-      ${eventLink ? `<a href="${eventLink}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>` : ''}
+      <a href="${addToCalUrl}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
 
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you need to reschedule or cancel, just reply to this email.</p>
     </div>
@@ -117,9 +129,10 @@ export async function sendPendingBookingToBooker(
 export async function sendApprovalConfirmation(
   booking: BookingDetails,
   project: Project,
-  eventLink: string,
+  _eventLink: string,
 ) {
   const resend = getResend();
+  const addToCalUrl = buildAddToCalendarUrl(booking, project.name);
   const from = formatDateTime(booking.startISO);
   const to = formatDateTime(booking.endISO);
 
@@ -144,7 +157,7 @@ export async function sendApprovalConfirmation(
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your booking has been confirmed by Chiibitsu Labs.</p>
-      ${eventLink ? `<a href="${eventLink}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>` : ''}
+      <a href="${addToCalUrl}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you need to reschedule or cancel, just reply to this email.</p>
     </div>
   </div>
