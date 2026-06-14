@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPendingToken } from '@/lib/pending-token';
+import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { getProjectBySlug } from '@/lib/db';
-import { createBookingEvent } from '@/lib/google-calendar';
+import { createBookingEvent, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendApprovalConfirmation,
   sendRejectionEmail,
   sendBookingNotificationToAdmin,
 } from '@/lib/email';
+import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
 
 function page(icon: string, heading: string, body: string) {
   return new NextResponse(
@@ -68,6 +70,11 @@ export async function GET(req: NextRequest) {
 
   if (action === 'reject') {
     await sendRejectionEmail(booking, project).catch(() => {});
+    if (hasTelegram()) {
+      await sendSimpleMessage(
+        `❌ *Rejected* · ${project.name} · ${payload.name}\nRejection email sent to ${payload.email}`,
+      ).catch(() => {});
+    }
     return page(
       '❌',
       'Booking rejected',
@@ -77,11 +84,32 @@ export async function GET(req: NextRequest) {
 
   // Approve: create the Google Calendar event
   try {
-    const { eventLink } = await createBookingEvent(booking, project.calendarId);
+    const { eventId, eventLink } = await createBookingEvent(booking, project.calendarId);
+
+    // If this was a reschedule request, cancel the original event
+    if (payload.rescheduleToken) {
+      const reschedulePayload = verifyRescheduleToken(payload.rescheduleToken);
+      if (reschedulePayload) {
+        await cancelBookingEvent(reschedulePayload.eventId, reschedulePayload.calendarId).catch(
+          (e) => console.error('Failed to cancel old event on approval:', e),
+        );
+      }
+    }
+
     await Promise.allSettled([
-      sendApprovalConfirmation(booking, project, eventLink),
+      sendApprovalConfirmation(booking, project, eventId, project.calendarId),
       sendBookingNotificationToAdmin(booking, project, eventLink),
     ]);
+
+    if (hasTelegram()) {
+      const dateInfo = booking.startISO
+        ? ` · ${new Date(booking.startISO).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}`
+        : '';
+      await sendSimpleMessage(
+        `✅ *Approved* · ${project.name} · ${payload.name}${dateInfo}\nConfirmation email sent to ${payload.email}`,
+      ).catch(() => {});
+    }
+
     return page(
       '✅',
       'Booking approved!',

@@ -3,11 +3,23 @@ import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import type { BookingDetails } from './google-calendar';
 import type { Project } from '@/config/projects';
+import { createRescheduleToken } from './reschedule-token';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
+}
+
+function buildAddToCalendarUrl(booking: BookingDetails, projectName: string): string {
+  const fmt = (iso: string) =>
+    iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '').replace('Z', 'Z');
+  const company = booking.customFields.company_name || booking.bookerCompany || booking.bookerName;
+  const department = booking.customFields.department;
+  const title = department
+    ? `[${projectName}] ${company} - ${department}`
+    : `[${projectName}] ${company}`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(booking.startISO)}/${fmt(booking.endISO)}`;
 }
 
 function formatDateTime(isoString: string) {
@@ -19,12 +31,33 @@ function formatDateTime(isoString: string) {
   };
 }
 
+function buildRescheduleUrl(booking: BookingDetails, eventId: string, calendarId?: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+  const token = createRescheduleToken({
+    eventId,
+    calendarId,
+    projectSlug: booking.projectSlug,
+    bookerName: booking.bookerName,
+    bookerEmail: booking.bookerEmail,
+    bookerPhone: booking.bookerPhone ?? '',
+    bookerCompany: booking.bookerCompany ?? '',
+    customFields: booking.customFields,
+    originalStartISO: booking.startISO,
+    originalEndISO: booking.endISO,
+    expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+  });
+  return `${baseUrl}/${booking.projectSlug}?reschedule=${token}`;
+}
+
 export async function sendBookingConfirmationToBooker(
   booking: BookingDetails,
   project: Project,
-  eventLink: string,
+  eventId: string,
+  calendarId?: string,
 ) {
   const resend = getResend();
+  const addToCalUrl = buildAddToCalendarUrl(booking, project.name);
+  const rescheduleUrl = buildRescheduleUrl(booking, eventId, calendarId);
   const from = formatDateTime(booking.startISO);
   const to = formatDateTime(booking.endISO);
 
@@ -64,9 +97,10 @@ export async function sendBookingConfirmationToBooker(
         ${customFieldsHtml}
       </table>
 
-      ${eventLink ? `<a href="${eventLink}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>` : ''}
+      <a href="${addToCalUrl}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
 
-      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you need to reschedule or cancel, just reply to this email.</p>
+      <p style="margin:20px 0 4px;font-size:13px;color:#6b7280;">Need to change your time? <a href="${rescheduleUrl}" style="color:#4f46e5;font-weight:600;">Reschedule →</a></p>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">To cancel, just reply to this email.</p>
     </div>
   </div>
 </body>
@@ -117,9 +151,12 @@ export async function sendPendingBookingToBooker(
 export async function sendApprovalConfirmation(
   booking: BookingDetails,
   project: Project,
-  eventLink: string,
+  eventId: string,
+  calendarId?: string,
 ) {
   const resend = getResend();
+  const addToCalUrl = buildAddToCalendarUrl(booking, project.name);
+  const rescheduleUrl = buildRescheduleUrl(booking, eventId, calendarId);
   const from = formatDateTime(booking.startISO);
   const to = formatDateTime(booking.endISO);
 
@@ -144,8 +181,9 @@ export async function sendApprovalConfirmation(
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your booking has been confirmed by Chiibitsu Labs.</p>
-      ${eventLink ? `<a href="${eventLink}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>` : ''}
-      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">If you need to reschedule or cancel, just reply to this email.</p>
+      <a href="${addToCalUrl}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
+      <p style="margin:20px 0 4px;font-size:13px;color:#6b7280;">Need to change your time? <a href="${rescheduleUrl}" style="color:#16a34a;font-weight:600;">Reschedule →</a></p>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">To cancel, just reply to this email.</p>
     </div>
   </div>
 </body>

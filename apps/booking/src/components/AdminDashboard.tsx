@@ -158,7 +158,15 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
       {filtered.length === 0 ? (
         <p className="text-gray-500 text-center py-12">No upcoming bookings.</p>
       ) : (
-        <div className="space-y-3">{filtered.map((b) => <BookingRow key={b.eventId} booking={b} />)}</div>
+        <div className="space-y-3">{filtered.map((b) => (
+          <BookingRow
+            key={b.eventId}
+            booking={b}
+            adminEmail={adminEmail}
+            adminPassword={adminPassword}
+            onCancel={load}
+          />
+        ))}</div>
       )}
     </div>
   );
@@ -422,9 +430,49 @@ function Spinner() {
   );
 }
 
-function BookingRow({ booking }: { booking: AdminBooking }) {
+function BookingRow({
+  booking,
+  adminEmail,
+  adminPassword,
+  onCancel,
+}: {
+  booking: AdminBooking;
+  adminEmail: string;
+  adminPassword: string;
+  onCancel: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const customEntries = Object.entries(booking.customFields).filter(([, v]) => v);
+
+  async function handleCancel() {
+    if (!confirm(`Cancel booking for ${booking.bookerName} on ${booking.dateLabel}?\n\nThis will delete the Google Calendar event.`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch('/api/admin/cancel-booking', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': adminEmail,
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({
+          eventId: booking.eventId,
+          bookerName: booking.bookerName,
+          projectName: booking.projectName,
+          dateLabel: booking.dateLabel,
+        }),
+      });
+      if (res.ok) {
+        onCancel();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Cancel failed: ${data.error ?? 'Unknown error'}`);
+      }
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -447,12 +495,21 @@ function BookingRow({ booking }: { booking: AdminBooking }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {expanded && (booking.bookerCompany || customEntries.length > 0) && (
+      {expanded && (
         <div className="border-t border-gray-800 px-5 py-4">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {booking.bookerCompany && (<><dt className="text-xs text-gray-500">Company</dt><dd className="text-xs text-gray-300">{booking.bookerCompany}</dd></>)}
-            {customEntries.map(([k, v]) => (<><dt key={`k-${k}`} className="text-xs text-gray-500">{k}</dt><dd key={`v-${k}`} className="text-xs text-gray-300">{v}</dd></>))}
-          </dl>
+          {(booking.bookerCompany || customEntries.length > 0) && (
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mb-4">
+              {booking.bookerCompany && (<><dt className="text-xs text-gray-500">Company</dt><dd className="text-xs text-gray-300">{booking.bookerCompany}</dd></>)}
+              {customEntries.map(([k, v]) => (<><dt key={`k-${k}`} className="text-xs text-gray-500">{k}</dt><dd key={`v-${k}`} className="text-xs text-gray-300">{v}</dd></>))}
+            </dl>
+          )}
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="px-3 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-900/30 transition disabled:opacity-50"
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel booking'}
+          </button>
         </div>
       )}
     </div>

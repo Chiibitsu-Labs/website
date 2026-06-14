@@ -1,29 +1,30 @@
 import crypto from 'crypto';
 
-export interface PendingBookingPayload {
+export interface RescheduleTokenPayload {
+  eventId: string;
+  calendarId?: string;
   projectSlug: string;
-  name: string;
-  email: string;
-  phone: string;
+  bookerName: string;
+  bookerEmail: string;
+  bookerPhone: string;
   bookerCompany: string;
-  startISO: string;
-  endISO: string;
   customFields: Record<string, string>;
+  originalStartISO: string;
+  originalEndISO: string;
   expiresAt: number;
-  rescheduleToken?: string;
 }
 
 function secret() {
-  return process.env.ADMIN_PASSWORD ?? 'pending-booking-secret';
+  return process.env.ADMIN_PASSWORD ?? 'reschedule-secret';
 }
 
-export function createPendingToken(payload: PendingBookingPayload): string {
+export function createRescheduleToken(payload: RescheduleTokenPayload): string {
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = crypto.createHmac('sha256', secret()).update(data).digest('base64url');
   return `${data}.${sig}`;
 }
 
-export function verifyPendingToken(token: string): PendingBookingPayload | null {
+export function verifyRescheduleToken(token: string): RescheduleTokenPayload | null {
   const dot = token.lastIndexOf('.');
   if (dot === -1) return null;
   const data = token.slice(0, dot);
@@ -34,7 +35,7 @@ export function verifyPendingToken(token: string): PendingBookingPayload | null 
   } catch {
     return null;
   }
-  const payload: PendingBookingPayload = JSON.parse(
+  const payload: RescheduleTokenPayload = JSON.parse(
     Buffer.from(data, 'base64url').toString(),
   );
   if (Date.now() > payload.expiresAt) return null;
