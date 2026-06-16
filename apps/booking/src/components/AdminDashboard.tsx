@@ -114,7 +114,7 @@ export function AdminDashboard() {
 
 function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filterSlug, setFilterSlug] = useState('all');
 
   async function load() {
@@ -168,7 +168,7 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminProject | 'new' | null>(null);
   const [noDb, setNoDb] = useState(false);
 
@@ -288,11 +288,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
           {(projects ?? []).map((p, idx) => (
             <div key={p.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center gap-4 ${!p.isActive ? 'opacity-50' : ''}`}>
               {/* Reorder buttons */}
-              <div className="flex flex-col gap-0.5 shrink-0">
+              <div className="flex flex-col shrink-0">
                 <button
                   onClick={() => reorder(idx, 'up')}
                   disabled={idx === 0}
-                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
                   title="Move up"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -302,7 +302,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
                 <button
                   onClick={() => reorder(idx, 'down')}
                   disabled={idx === (projects ?? []).length - 1}
-                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
                   title="Move down"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
