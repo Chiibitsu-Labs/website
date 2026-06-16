@@ -94,7 +94,7 @@ export function ProjectCard({ project }: Props) {
             {formatDuration(project.durationMinutes)}
           </span>
           <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${
-            project.isPaid ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+            project.isPaid ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
           }`}>
             {project.isPaid ? 'Paid' : 'Free'}
           </span>

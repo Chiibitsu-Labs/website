@@ -105,6 +105,7 @@ export const SEED_PROJECTS: Project[] = [
       },
     ],
     bookingWindowWeeks: 8,
+    isPaid: true,
   },
   {
     slug: 'aicos-fit-call',
