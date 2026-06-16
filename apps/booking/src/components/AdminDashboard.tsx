@@ -114,7 +114,7 @@ export function AdminDashboard() {
 
 function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filterSlug, setFilterSlug] = useState('all');
 
   async function load() {
@@ -168,7 +168,7 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminProject | 'new' | null>(null);
   const [noDb, setNoDb] = useState(false);
 
