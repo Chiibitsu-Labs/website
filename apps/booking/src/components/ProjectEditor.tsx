@@ -47,6 +47,7 @@ interface FormState {
   bookingWindowWeeks: number;
   calendarId: string;
   slug: string;
+  isPaid: boolean;
 }
 
 function projectToForm(p?: Project): FormState {
@@ -63,6 +64,7 @@ function projectToForm(p?: Project): FormState {
     bookingWindowWeeks: p?.bookingWindowWeeks ?? 4,
     calendarId: p?.calendarId ?? '',
     slug: p?.slug ?? '',
+    isPaid: p?.isPaid ?? false,
   };
 }
 
@@ -155,6 +157,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
       customFields: form.customFields,
       bookingWindowWeeks: form.bookingWindowWeeks,
       calendarId: form.calendarId || undefined,
+      isPaid: form.isPaid,
     };
 
     const url = isNew ? '/api/admin/projects' : `/api/admin/projects/${project!.slug}`;
@@ -393,6 +396,20 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
 
             {/* Settings */}
             <Section title="Settings">
+              <Field label="Session type">
+                <button
+                  type="button"
+                  onClick={() => setField('isPaid', !form.isPaid)}
+                  className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition ${
+                    form.isPaid
+                      ? 'bg-amber-600/20 text-amber-300 border border-amber-600/40'
+                      : 'bg-green-900/20 text-green-400 border border-green-700/40'
+                  }`}
+                >
+                  <span>{form.isPaid ? '💰' : '✓'}</span>
+                  {form.isPaid ? 'Paid session' : 'Free session'}
+                </button>
+              </Field>
               <Field label="Booking window" hint="How far ahead someone can book">
                 <select
                   value={form.bookingWindowWeeks}

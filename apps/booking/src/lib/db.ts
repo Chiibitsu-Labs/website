@@ -18,6 +18,8 @@ interface ProjectRow {
   blocked_dates: string[];
   calendar_id: string | null;
   is_active: boolean;
+  is_paid: boolean;
+  sort_order: number;
   created_at: string;
 }
 
@@ -51,6 +53,8 @@ function rowToProject(row: ProjectRow): Project {
     bookingWindowWeeks: row.booking_window_weeks,
     blockedDates: row.blocked_dates ?? [],
     calendarId: row.calendar_id ?? undefined,
+    isPaid: row.is_paid ?? false,
+    sortOrder: row.sort_order ?? 0,
   };
 }
 
@@ -62,7 +66,8 @@ export async function getProjects(): Promise<Project[]> {
     .from('booking_projects')
     .select('*')
     .eq('is_active', true)
-    .order('created_at');
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('DB getProjects error:', error);
@@ -100,7 +105,8 @@ export async function getAllProjectsAdmin(): Promise<(Project & { isActive: bool
   const { data, error } = await client
     .from('booking_projects')
     .select('*')
-    .order('created_at');
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) throw error;
   return (data ?? []).map((row: ProjectRow) => ({
@@ -123,6 +129,8 @@ export interface ProjectInput {
   customFields: CustomField[];
   bookingWindowWeeks: number;
   calendarId?: string;
+  isPaid?: boolean;
+  sortOrder?: number;
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
@@ -144,6 +152,8 @@ export async function createProject(input: ProjectInput): Promise<Project> {
       custom_fields: input.customFields,
       booking_window_weeks: input.bookingWindowWeeks,
       calendar_id: input.calendarId ?? null,
+      is_paid: input.isPaid ?? false,
+      sort_order: input.sortOrder ?? 0,
       is_active: true,
     })
     .select()
@@ -169,6 +179,8 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
   if (input.customFields !== undefined) patch.custom_fields = input.customFields;
   if (input.bookingWindowWeeks !== undefined) patch.booking_window_weeks = input.bookingWindowWeeks;
   if ('calendarId' in input) patch.calendar_id = input.calendarId ?? null;
+  if (input.isPaid !== undefined) patch.is_paid = input.isPaid;
+  if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
 
   const { data, error } = await client
