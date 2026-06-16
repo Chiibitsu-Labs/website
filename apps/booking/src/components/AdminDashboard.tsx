@@ -288,11 +288,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
           {(projects ?? []).map((p, idx) => (
             <div key={p.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center gap-4 ${!p.isActive ? 'opacity-50' : ''}`}>
               {/* Reorder buttons */}
-              <div className="flex flex-col gap-0.5 shrink-0">
+              <div className="flex flex-col shrink-0">
                 <button
                   onClick={() => reorder(idx, 'up')}
                   disabled={idx === 0}
-                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
                   title="Move up"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -302,7 +302,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
                 <button
                   onClick={() => reorder(idx, 'down')}
                   disabled={idx === (projects ?? []).length - 1}
-                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
                   title="Move down"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
