@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <title>Build Your Own Branded Booking Site — Chiibitsu Labs</title>
   <meta name="description" content="A private Chiibitsu Labs prompt kit for building a branded booking site with Claude Code, GitHub, and Vercel." />
   <meta name="robots" content="noindex, nofollow" />
@@ -328,7 +329,7 @@
         </article>
         <article class="card">
           <h3>Tools</h3>
-          <p>You can start with a $20 ChatGPT subscription for planning and copy. Claude Code is what you’ll use to generate and edit the app.</p>
+          <p>Use Claude Code for planning, copy, generation, and edits. Keep the work in one project folder so it can read the app and improve it step by step.</p>
         </article>
         <article class="card">
           <h3>Mindset</h3>
@@ -362,7 +363,7 @@
           <div>
             <h3>Open Claude Code</h3>
             <p>Use Claude Code in the folder for your new project. Paste the full prompt below. If Claude asks clarifying questions, answer with your company name, services, colors, timezone, and booking types.</p>
-            <div class="mini-actions"><a class="btn soft" href="https://www.anthropic.com/claude-code" target="_blank" rel="noreferrer">Claude Code</a><button class="btn soft copy-short" type="button" data-copy="Use my company name, colors, services, timezone, and booking types. Keep it simple, polished, and easy to deploy.">Copy mini brief</button></div>
+            <div class="mini-actions"><a class="btn soft" href="https://claude.ai/code" target="_blank" rel="noreferrer">Claude Code</a><button class="btn soft copy-full-prompt" type="button">Copy full prompt</button></div>
           </div>
         </article>
         <article class="step">
@@ -390,7 +391,7 @@
       <div class="prompt-box">
         <div class="prompt-toolbar">
           <span>Full prompt for Claude Code</span>
-          <button id="copy-prompt" class="btn" type="button">Copy prompt</button>
+          <button id="copy-prompt" class="btn" type="button">Copy full prompt</button>
         </div>
         <pre id="prompt-text">I want to build a clean, company-branded booking site for my business. Please create it as a Next.js app using TypeScript and Tailwind CSS.
 
@@ -509,8 +510,8 @@ Important: build the simple working version first, then add integrations. If any
     }
 
     copyPrompt.addEventListener('click', () => copyToClipboard(promptText.textContent.trim(), copyPrompt, 'Copied!'));
-    document.querySelectorAll('.copy-short').forEach((button) => {
-      button.addEventListener('click', () => copyToClipboard(button.dataset.copy, button, 'Copied!'));
+    document.querySelectorAll('.copy-full-prompt').forEach((button) => {
+      button.addEventListener('click', () => copyToClipboard(promptText.textContent.trim(), button, 'Copied!'));
     });
   </script>
 </body>
