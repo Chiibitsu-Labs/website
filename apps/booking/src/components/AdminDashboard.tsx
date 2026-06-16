@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AdminBooking } from '@/lib/google-calendar';
 import type { Project } from '@/config/projects';
 import { ProjectEditor } from './ProjectEditor';
@@ -127,18 +127,10 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     setLoading(false);
   }
 
-  if (!bookings && !loading) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-gray-400 mb-4">Load your upcoming bookings</p>
-        <button onClick={load} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-sm font-semibold transition">
-          Load bookings
-        </button>
-      </div>
-    );
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []);
 
-  if (loading) return <Spinner />;
+  if (loading && !bookings) return <Spinner />;
 
   const uniqueSlugs = Array.from(new Set((bookings ?? []).map((b) => b.projectSlug)));
   const filtered = filterSlug === 'all' ? bookings! : bookings!.filter((b) => b.projectSlug === filterSlug);
@@ -191,6 +183,32 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     setLoading(false);
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []);
+
+  async function reorder(idx: number, direction: 'up' | 'down') {
+    const list = projects!;
+    const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (otherIdx < 0 || otherIdx >= list.length) return;
+    const a = list[idx];
+    const b = list[otherIdx];
+    const aSortOrder = a.sortOrder ?? idx;
+    const bSortOrder = b.sortOrder ?? otherIdx;
+    await Promise.all([
+      fetch(`/api/admin/projects/${a.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+        body: JSON.stringify({ sortOrder: bSortOrder }),
+      }),
+      fetch(`/api/admin/projects/${b.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+        body: JSON.stringify({ sortOrder: aSortOrder }),
+      }),
+    ]);
+    load();
+  }
+
   async function toggleActive(p: AdminProject) {
     await fetch(`/api/admin/projects/${p.slug}`, {
       method: 'PUT',
@@ -232,18 +250,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     );
   }
 
-  if (!projects && !loading) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-gray-400 mb-4">Manage your booking projects</p>
-        <button onClick={load} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-sm font-semibold transition">
-          Load projects
-        </button>
-      </div>
-    );
-  }
-
-  if (loading) return <Spinner />;
+  if (loading && !projects) return <Spinner />;
 
   return (
     <div>
@@ -274,16 +281,44 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
         </div>
       </div>
 
-      {projects!.length === 0 ? (
+      {(projects ?? []).length === 0 ? (
         <p className="text-gray-500 text-center py-12">No projects yet. Create one or tap &quot;Load defaults&quot; to start with the 2 pre-configured projects.</p>
       ) : (
         <div className="space-y-3">
-          {projects!.map((p) => (
+          {(projects ?? []).map((p, idx) => (
             <div key={p.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center gap-4 ${!p.isActive ? 'opacity-50' : ''}`}>
+              {/* Reorder buttons */}
+              <div className="flex flex-col gap-0.5 shrink-0">
+                <button
+                  onClick={() => reorder(idx, 'up')}
+                  disabled={idx === 0}
+                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  title="Move up"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => reorder(idx, 'down')}
+                  disabled={idx === (projects ?? []).length - 1}
+                  className="p-1 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition"
+                  title="Move down"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.branding.emoji && <span>{p.branding.emoji}</span>}
                   <span className="text-white font-semibold text-sm">{p.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    p.isPaid ? 'bg-amber-900/40 text-amber-400' : 'bg-green-900/30 text-green-400'
+                  }`}>
+                    {p.isPaid ? 'Paid' : 'Free'}
+                  </span>
                   {!p.isActive && <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded-full">Paused</span>}
                 </div>
                 <p className="text-gray-400 text-xs mt-0.5">{p.company} · /{p.slug}</p>
@@ -309,7 +344,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 // ─── Setup Tab ────────────────────────────────────────────────────────────────
 
-const SQL_SNIPPET = `CREATE TABLE booking_projects (
+const SQL_SNIPPET = `CREATE TABLE IF NOT EXISTS booking_projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -325,8 +360,15 @@ const SQL_SNIPPET = `CREATE TABLE booking_projects (
   blocked_dates TEXT[] NOT NULL DEFAULT '{}',
   calendar_id TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_paid BOOLEAN NOT NULL DEFAULT false,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);`;
+);
+
+-- Run this if the table already exists:
+ALTER TABLE booking_projects
+  ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;`;
 
 function SetupTab({ adminPassword }: { adminPassword: string }) {
   const [copied, setCopied] = useState(false);

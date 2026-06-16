@@ -86,12 +86,17 @@ export function ProjectCard({ project }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center gap-2 mt-4 flex-wrap">
           <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${colors.badge}`}>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {formatDuration(project.durationMinutes)}
+          </span>
+          <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${
+            project.isPaid ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+          }`}>
+            {project.isPaid ? 'Paid' : 'Free'}
           </span>
           <span className="text-xs text-gray-400">·</span>
           <span className="text-xs text-gray-500">{project.tagline}</span>

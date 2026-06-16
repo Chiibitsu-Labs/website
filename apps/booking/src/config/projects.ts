@@ -43,6 +43,10 @@ export interface Project {
   blockedDates?: string[];
   // How many weeks ahead can someone book?
   bookingWindowWeeks: number;
+  // Whether this is a paid session
+  isPaid?: boolean;
+  // Display order on the homepage (lower = first)
+  sortOrder?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
