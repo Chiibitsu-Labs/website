@@ -59,7 +59,8 @@
         linear-gradient(135deg, #fbfaf7 0%, #f3edf8 100%);
     }
     .gate-card {
-      width: min(100%, 440px);
+      width: 100%;
+      max-width: 440px;
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--rule);
       box-shadow: var(--shadow);
@@ -250,9 +251,23 @@
     .upsell h2 { font-size: 42px; margin-bottom: 8px; }
     .upsell p { margin: 0; color: rgba(255,255,255,0.78); }
     .upsell .btn { background: white; color: var(--purple-dark); }
-    footer { color: var(--ink-faint); text-align: center; padding: 40px 24px 60px; font-size: 13px; }
+    footer {
+      color: var(--ink-faint);
+      text-align: center;
+      padding: 40px 24px 60px;
+      font-size: 13px;
+    }
+    .footer-brand {
+      margin: 0 0 8px;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+    .footer-brand a { color: var(--purple-dark); text-decoration: none; }
+    .footer-note { margin: 0; }
 
     @media (max-width: 820px) {
+      .gate { padding: 20px; }
+      .gate-card { padding: 28px; }
       .hero { grid-template-columns: 1fr; padding-top: 54px; }
       .grid { grid-template-columns: 1fr; }
       .upsell { grid-template-columns: 1fr; }
@@ -469,8 +484,9 @@ Important: build the simple working version first, then add integrations. If any
       </div>
     </section>
 
-    <footer>
-      Built by Chiibitsu Labs. Share the page with people who asked for it, and please do not post the password publicly.
+    <footer aria-label="Chiibitsu Labs footer">
+      <p class="footer-brand">Built by <a href="https://chiibitsu.com">Chiibitsu Labs</a> · <a href="mailto:labs@chiibitsu.com">labs@chiibitsu.com</a></p>
+      <p class="footer-note">Share the page with people who asked for it, and please do not post the password publicly.</p>
     </footer>
   </div>
 
