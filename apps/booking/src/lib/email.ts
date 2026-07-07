@@ -11,6 +11,16 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+// The email address alone makes inboxes show the local part ("booking") as the
+// sender name. Give it a proper display name. If EMAIL_FROM already includes a
+// "Name <email>" form, respect it; otherwise prepend EMAIL_FROM_NAME.
+function fromField(): string {
+  const email = process.env.EMAIL_FROM ?? 'booking@chiibitsu.com';
+  if (email.includes('<')) return email;
+  const name = process.env.EMAIL_FROM_NAME ?? 'Chiibitsu Labs';
+  return `${name} <${email}>`;
+}
+
 function buildAddToCalendarUrl(booking: BookingDetails, projectName: string): string {
   const fmt = (iso: string) =>
     iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '').replace('Z', 'Z');
@@ -67,7 +77,7 @@ export async function sendBookingConfirmationToBooker(
     .join('');
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'booking@chiibitsu.com',
+    from: fromField(),
     to: booking.bookerEmail,
     subject: `Booking confirmed: ${project.name}`,
     html: `
@@ -118,7 +128,7 @@ export async function sendPendingBookingToBooker(
   const to = formatDateTime(booking.endISO);
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'booking@chiibitsu.com',
+    from: fromField(),
     to: booking.bookerEmail,
     subject: `Booking request received: ${project.name}`,
     html: `
@@ -161,7 +171,7 @@ export async function sendApprovalConfirmation(
   const to = formatDateTime(booking.endISO);
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'booking@chiibitsu.com',
+    from: fromField(),
     to: booking.bookerEmail,
     subject: `Booking confirmed: ${project.name}`,
     html: `
@@ -200,7 +210,7 @@ export async function sendRejectionEmail(
   const to = formatDateTime(booking.endISO);
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'booking@chiibitsu.com',
+    from: fromField(),
     to: booking.bookerEmail,
     subject: `Re: Your booking request — ${project.name}`,
     html: `
@@ -246,7 +256,7 @@ export async function sendBookingNotificationToAdmin(
     .join('\n');
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'booking@chiibitsu.com',
+    from: fromField(),
     to: adminEmail,
     subject: `New booking: ${project.name} — ${booking.bookerName}`,
     html: `
