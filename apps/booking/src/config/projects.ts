@@ -47,6 +47,8 @@ export interface Project {
   isPaid?: boolean;
   // Display order on the homepage (lower = first)
   sortOrder?: number;
+  // Where the session takes place
+  locationType?: 'online' | 'in_person';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
