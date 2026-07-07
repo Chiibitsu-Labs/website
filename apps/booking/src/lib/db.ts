@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import type { Project, TimeSlotTemplate, CustomField } from '@/config/projects';
 import { SEED_PROJECTS } from '@/config/projects';
@@ -63,6 +64,7 @@ function rowToProject(row: ProjectRow): Project {
 }
 
 export async function getProjects(): Promise<Project[]> {
+  noStore(); // never serve a cached project list — admin edits must show immediately
   const client = getClient();
   if (!client) return SEED_PROJECTS;
 
@@ -82,6 +84,7 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
+  noStore(); // always read the live row so admin changes (location, colour, copy) show immediately
   const client = getClient();
   if (!client) {
     return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
@@ -103,6 +106,7 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
 }
 
 export async function getAllProjectsAdmin(): Promise<(Project & { isActive: boolean; id: string })[]> {
+  noStore();
   const client = getClient();
   if (!client) return [];
 

@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
       endISO,
       customFields,
       calendarEventTitleTemplate: project.calendarEventTitleTemplate,
+      projectDescription: project.description,
+      locationType: project.locationType,
     };
 
     // ── Pending approval via Telegram ─────────────────────────────────────────
