@@ -22,6 +22,11 @@ const DURATIONS = [
   { label: '2 hours', value: 120 },
   { label: '3 hours', value: 180 },
   { label: '4 hours', value: 240 },
+  { label: '5 hours', value: 300 },
+  { label: '6 hours', value: 360 },
+  { label: '7 hours', value: 420 },
+  { label: '8 hours', value: 480 },
+  { label: '9 hours', value: 540 },
 ];
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

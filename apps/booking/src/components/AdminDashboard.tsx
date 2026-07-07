@@ -192,20 +192,23 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     if (otherIdx < 0 || otherIdx >= list.length) return;
     const a = list[idx];
     const b = list[otherIdx];
-    const aSortOrder = a.sortOrder ?? idx;
-    const bSortOrder = b.sortOrder ?? otherIdx;
-    await Promise.all([
+    // Assign the target index as sort_order so the swap works even when all
+    // projects currently have the same sort_order value (e.g. 0 on first use).
+    const results = await Promise.all([
       fetch(`/api/admin/projects/${a.slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
-        body: JSON.stringify({ sortOrder: bSortOrder }),
+        body: JSON.stringify({ sortOrder: otherIdx }),
       }),
       fetch(`/api/admin/projects/${b.slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
-        body: JSON.stringify({ sortOrder: aSortOrder }),
+        body: JSON.stringify({ sortOrder: idx }),
       }),
     ]);
+    if (results.some(r => !r.ok)) {
+      alert('Reorder failed — make sure the database migration has been run (sort_order column required).');
+    }
     load();
   }
 
