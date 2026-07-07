@@ -2,18 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cancelBookingEvent } from '@/lib/google-calendar';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
 import { errorMessage } from '@/lib/utils';
-
-function checkAuth(req: NextRequest) {
-  const password = req.headers.get('x-admin-password');
-  const email = req.headers.get('x-admin-email');
-  return (
-    password === process.env.ADMIN_PASSWORD &&
-    (!process.env.ADMIN_EMAIL || email === process.env.ADMIN_EMAIL)
-  );
-}
+import { checkAdminAuth } from '@/lib/admin-auth';
 
 export async function DELETE(req: NextRequest) {
-  if (!checkAuth(req)) {
+  if (!checkAdminAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

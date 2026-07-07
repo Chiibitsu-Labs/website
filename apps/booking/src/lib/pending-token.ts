@@ -13,8 +13,13 @@ export interface PendingBookingPayload {
   rescheduleToken?: string;
 }
 
-function secret() {
-  return process.env.ADMIN_PASSWORD ?? 'pending-booking-secret';
+function secret(): string {
+  // Dedicated secret preferred; ADMIN_PASSWORD fallback keeps tokens issued
+  // before BOOKING_TOKEN_SECRET existed verifiable. Never a hardcoded default —
+  // that would let anyone forge approval links.
+  const s = process.env.BOOKING_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD;
+  if (!s) throw new Error('BOOKING_TOKEN_SECRET (or ADMIN_PASSWORD) must be set');
+  return s;
 }
 
 export function createPendingToken(payload: PendingBookingPayload): string {

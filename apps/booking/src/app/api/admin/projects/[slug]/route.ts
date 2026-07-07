@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateProject, deleteProject, hasDatabase } from '@/lib/db';
 import { errorMessage } from '@/lib/utils';
-
-function checkAuth(req: NextRequest) {
-  const password = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('password');
-  const email = req.headers.get('x-admin-email') ?? req.nextUrl.searchParams.get('email');
-  const validPassword = password === process.env.ADMIN_PASSWORD;
-  const validEmail = !process.env.ADMIN_EMAIL || email === process.env.ADMIN_EMAIL;
-  return validPassword && validEmail;
-}
+import { checkAdminAuth } from '@/lib/admin-auth';
 
 export async function PUT(req: NextRequest, { params }: { params: { slug: string } }) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!checkAdminAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!hasDatabase()) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
 
   try {
@@ -25,7 +18,7 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { slug: string } }) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!checkAdminAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!hasDatabase()) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
 
   try {

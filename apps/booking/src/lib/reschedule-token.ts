@@ -14,8 +14,13 @@ export interface RescheduleTokenPayload {
   expiresAt: number;
 }
 
-function secret() {
-  return process.env.ADMIN_PASSWORD ?? 'reschedule-secret';
+function secret(): string {
+  // Dedicated secret preferred; ADMIN_PASSWORD fallback keeps tokens issued
+  // before BOOKING_TOKEN_SECRET existed verifiable. Never a hardcoded default —
+  // that would let anyone forge reschedule links.
+  const s = process.env.BOOKING_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD;
+  if (!s) throw new Error('BOOKING_TOKEN_SECRET (or ADMIN_PASSWORD) must be set');
+  return s;
 }
 
 export function createRescheduleToken(payload: RescheduleTokenPayload): string {
