@@ -366,6 +366,7 @@ const SQL_SNIPPET = `CREATE TABLE IF NOT EXISTS booking_projects (
   is_paid BOOLEAN NOT NULL DEFAULT false,
   sort_order INTEGER NOT NULL DEFAULT 0,
   location_type TEXT NOT NULL DEFAULT 'online',
+  calendar_event_title_template TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -373,7 +374,8 @@ const SQL_SNIPPET = `CREATE TABLE IF NOT EXISTS booking_projects (
 ALTER TABLE booking_projects
   ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS location_type TEXT NOT NULL DEFAULT 'online';`;
+  ADD COLUMN IF NOT EXISTS location_type TEXT NOT NULL DEFAULT 'online',
+  ADD COLUMN IF NOT EXISTS calendar_event_title_template TEXT;`;
 
 function SetupTab({ adminPassword }: { adminPassword: string }) {
   const [copied, setCopied] = useState(false);

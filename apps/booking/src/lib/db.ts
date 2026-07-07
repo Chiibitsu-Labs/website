@@ -21,6 +21,7 @@ interface ProjectRow {
   is_paid: boolean;
   sort_order: number;
   location_type: string | null;
+  calendar_event_title_template: string | null;
   created_at: string;
 }
 
@@ -57,6 +58,7 @@ function rowToProject(row: ProjectRow): Project {
     isPaid: row.is_paid ?? false,
     sortOrder: row.sort_order ?? 0,
     locationType: row.location_type === 'in_person' ? 'in_person' : 'online',
+    calendarEventTitleTemplate: row.calendar_event_title_template ?? undefined,
   };
 }
 
@@ -134,6 +136,7 @@ export interface ProjectInput {
   isPaid?: boolean;
   sortOrder?: number;
   locationType?: 'online' | 'in_person';
+  calendarEventTitleTemplate?: string;
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
@@ -158,6 +161,7 @@ export async function createProject(input: ProjectInput): Promise<Project> {
       is_paid: input.isPaid ?? false,
       sort_order: input.sortOrder ?? 0,
       location_type: input.locationType ?? 'online',
+      calendar_event_title_template: input.calendarEventTitleTemplate ?? null,
       is_active: true,
     })
     .select()
@@ -186,6 +190,7 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
   if (input.isPaid !== undefined) patch.is_paid = input.isPaid;
   if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
   if (input.locationType !== undefined) patch.location_type = input.locationType;
+  if ('calendarEventTitleTemplate' in input) patch.calendar_event_title_template = input.calendarEventTitleTemplate ?? null;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
 
   const { data, error } = await client
