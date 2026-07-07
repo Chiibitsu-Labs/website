@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateProject, deleteProject, hasDatabase } from '@/lib/db';
+import { errorMessage } from '@/lib/utils';
 
 function checkAuth(req: NextRequest) {
   const password = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('password');
@@ -18,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
     const project = await updateProject(params.slug, body);
     return NextResponse.json({ project });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to update project';
+    const msg = errorMessage(err, 'Failed to update project');
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
@@ -31,7 +32,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
     await deleteProject(params.slug);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to delete project';
+    const msg = errorMessage(err, 'Failed to delete project');
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

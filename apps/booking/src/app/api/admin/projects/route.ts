@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllProjectsAdmin, createProject, hasDatabase } from '@/lib/db';
+import { errorMessage } from '@/lib/utils';
 
 function checkAuth(req: NextRequest) {
   const password = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('password');
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     const project = await createProject(body);
     return NextResponse.json({ project });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to create project';
+    const msg = errorMessage(err, 'Failed to create project');
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

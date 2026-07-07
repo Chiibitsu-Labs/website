@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cancelBookingEvent } from '@/lib/google-calendar';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { errorMessage } from '@/lib/utils';
 
 function checkAuth(req: NextRequest) {
   const password = req.headers.get('x-admin-password');
@@ -37,7 +38,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Cancel failed';
+    const msg = errorMessage(err, 'Cancel failed');
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
