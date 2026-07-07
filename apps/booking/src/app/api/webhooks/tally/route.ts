@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
 
 interface TallyField {
@@ -6,6 +7,22 @@ interface TallyField {
   label: string;
   type: string;
   value: unknown;
+}
+
+// Tally signs each webhook: base64(HMAC-SHA256(raw body, signing secret)) in
+// the tally-signature header. Enforced when TALLY_SIGNING_SECRET is set;
+// without it anyone who finds this URL can forge payment notifications.
+function verifySignature(rawBody: string, signature: string | null): boolean {
+  const secret = process.env.TALLY_SIGNING_SECRET;
+  if (!secret) {
+    console.warn('TALLY_SIGNING_SECRET not set — accepting webhook unverified');
+    return true;
+  }
+  if (!signature) return false;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('base64');
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expected);
+  return sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 function fieldValue(fields: TallyField[], label: string): string {
@@ -18,9 +35,15 @@ function fieldValue(fields: TallyField[], label: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  if (!verifySignature(rawBody, req.headers.get('tally-signature'))) {
+    return NextResponse.json({ ok: false, error: 'Invalid signature' }, { status: 401 });
+  }
+
   let body: { data?: { formId?: string; formName?: string; fields?: TallyField[] } };
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
   }

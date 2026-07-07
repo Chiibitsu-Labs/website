@@ -49,6 +49,10 @@ export interface Project {
   sortOrder?: number;
   // Where the session takes place
   locationType?: 'online' | 'in_person';
+  // Template for the Google Calendar invite title. Supports {project}, {company},
+  // {department}, {booker} tokens. Falls back to "[{project}] {company} - {department}"
+  // when not set.
+  calendarEventTitleTemplate?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

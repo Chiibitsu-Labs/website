@@ -54,6 +54,7 @@ interface FormState {
   slug: string;
   isPaid: boolean;
   locationType: 'online' | 'in_person';
+  calendarEventTitleTemplate: string;
 }
 
 function projectToForm(p?: Project): FormState {
@@ -72,6 +73,7 @@ function projectToForm(p?: Project): FormState {
     slug: p?.slug ?? '',
     isPaid: p?.isPaid ?? false,
     locationType: p?.locationType ?? 'online',
+    calendarEventTitleTemplate: p?.calendarEventTitleTemplate ?? '',
   };
 }
 
@@ -166,6 +168,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
       calendarId: form.calendarId || undefined,
       isPaid: form.isPaid,
       locationType: form.locationType,
+      calendarEventTitleTemplate: form.calendarEventTitleTemplate || undefined,
     };
 
     const url = isNew ? '/api/admin/projects' : `/api/admin/projects/${project!.slug}`;
@@ -431,6 +434,18 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
                   <span>{form.locationType === 'in_person' ? '📍' : '💻'}</span>
                   {form.locationType === 'in_person' ? 'Face to face' : 'Online'}
                 </button>
+              </Field>
+              <Field
+                label="Calendar invite title"
+                hint="Tokens: {project} {company} {department} {booker}. Leave blank for the default: [{project}] {company} - {department}"
+              >
+                <input
+                  type="text"
+                  value={form.calendarEventTitleTemplate}
+                  onChange={(e) => setField('calendarEventTitleTemplate', e.target.value)}
+                  placeholder="[{project}] {company} - {department}"
+                  className="admin-input"
+                />
               </Field>
               <Field label="Booking window" hint="How far ahead someone can book">
                 <select

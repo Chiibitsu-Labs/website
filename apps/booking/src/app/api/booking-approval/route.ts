@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
     startISO: payload.startISO,
     endISO: payload.endISO,
     customFields: payload.customFields,
+    calendarEventTitleTemplate: project.calendarEventTitleTemplate,
   };
 
   if (action === 'reject') {

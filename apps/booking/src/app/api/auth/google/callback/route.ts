@@ -4,9 +4,12 @@ import { google } from 'googleapis';
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const state = req.nextUrl.searchParams.get('state');
+  const expectedState = req.cookies.get('g_oauth_state')?.value;
 
-  if (state !== process.env.ADMIN_PASSWORD) {
-    return new NextResponse('Unauthorized', { status: 401 });
+  if (!state || !expectedState || state !== expectedState) {
+    return new NextResponse('Unauthorized: OAuth state mismatch. Start again from /api/auth/google.', {
+      status: 401,
+    });
   }
 
   if (!code) {

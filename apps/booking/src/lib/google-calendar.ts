@@ -123,6 +123,22 @@ export interface BookingDetails {
   startISO: string;
   endISO: string;
   customFields: Record<string, string>;
+  calendarEventTitleTemplate?: string;
+}
+
+const DEFAULT_EVENT_TITLE_TEMPLATE = '[{project}] {company} - {department}';
+
+function renderEventTitle(
+  template: string,
+  vars: { project: string; company: string; department: string; booker: string },
+): string {
+  let result = vars.department ? template : template.replace(/\s*-\s*\{department\}/g, '');
+  result = result
+    .replace(/\{project\}/g, vars.project)
+    .replace(/\{company\}/g, vars.company)
+    .replace(/\{department\}/g, vars.department)
+    .replace(/\{booker\}/g, vars.booker);
+  return result;
 }
 
 export async function createBookingEvent(
@@ -135,13 +151,14 @@ export async function createBookingEvent(
   const zonedStart = toZonedTime(new Date(booking.startISO), TIMEZONE);
   const zonedEnd = toZonedTime(new Date(booking.endISO), TIMEZONE);
 
-  // Build event title: [Project Name] Company - Department (department optional)
+  // Build event title from the project's template (default: "[Project] Company - Department")
   const company =
     booking.customFields.company_name || booking.bookerCompany || booking.bookerName;
-  const department = booking.customFields.department;
-  const eventSummary = department
-    ? `[${booking.projectName}] ${company} - ${department}`
-    : `[${booking.projectName}] ${company}`;
+  const department = booking.customFields.department ?? '';
+  const eventSummary = renderEventTitle(
+    booking.calendarEventTitleTemplate || DEFAULT_EVENT_TITLE_TEMPLATE,
+    { project: booking.projectName, company, department, booker: booking.bookerName },
+  );
 
   const customFieldsText = Object.entries(booking.customFields)
     .filter(([, v]) => v)
