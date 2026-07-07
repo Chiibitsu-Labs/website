@@ -20,6 +20,7 @@ interface ProjectRow {
   is_active: boolean;
   is_paid: boolean;
   sort_order: number;
+  location_type: string | null;
   created_at: string;
 }
 
@@ -55,6 +56,7 @@ function rowToProject(row: ProjectRow): Project {
     calendarId: row.calendar_id ?? undefined,
     isPaid: row.is_paid ?? false,
     sortOrder: row.sort_order ?? 0,
+    locationType: row.location_type === 'in_person' ? 'in_person' : 'online',
   };
 }
 
@@ -131,6 +133,7 @@ export interface ProjectInput {
   calendarId?: string;
   isPaid?: boolean;
   sortOrder?: number;
+  locationType?: 'online' | 'in_person';
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
@@ -154,6 +157,7 @@ export async function createProject(input: ProjectInput): Promise<Project> {
       calendar_id: input.calendarId ?? null,
       is_paid: input.isPaid ?? false,
       sort_order: input.sortOrder ?? 0,
+      location_type: input.locationType ?? 'online',
       is_active: true,
     })
     .select()
@@ -181,6 +185,7 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
   if ('calendarId' in input) patch.calendar_id = input.calendarId ?? null;
   if (input.isPaid !== undefined) patch.is_paid = input.isPaid;
   if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
+  if (input.locationType !== undefined) patch.location_type = input.locationType;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
 
   const { data, error } = await client

@@ -365,13 +365,15 @@ const SQL_SNIPPET = `CREATE TABLE IF NOT EXISTS booking_projects (
   is_active BOOLEAN NOT NULL DEFAULT true,
   is_paid BOOLEAN NOT NULL DEFAULT false,
   sort_order INTEGER NOT NULL DEFAULT 0,
+  location_type TEXT NOT NULL DEFAULT 'online',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Run this if the table already exists:
 ALTER TABLE booking_projects
   ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;`;
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS location_type TEXT NOT NULL DEFAULT 'online';`;
 
 function SetupTab({ adminPassword }: { adminPassword: string }) {
   const [copied, setCopied] = useState(false);
