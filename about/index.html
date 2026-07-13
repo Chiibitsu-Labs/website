@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Chiibitsu Labs and Founder Angeline "Chii" Viray</title>
+  <meta name="color-scheme" content="only light" />
+  <meta name="description" content="Meet Angeline &quot;Chii&quot; Viray, founder of Chiibitsu Labs, and learn how the practice helps people and organizations make clearer choices and build practical systems around emerging technology." />
+  <link rel="canonical" href="https://chiibitsu.com/about" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink:        #0E0A1A;
+      --ink-soft:   #3D3550;
+      --ink-faint:  #8A7EA0;
+      --page:       #FAFAF8;
+      --page-alt:   #F3EFF8;
+      --purple:     #6B3FA0;
+      --purple-dk:  #3D1F6B;
+      --purple-lt:  #EDE5F8;
+      --purple-mid: #9B6DC5;
+      --rule:       #E2DBF0;
+      --white:      #FFFFFF;
+      --dark:       #0A0614;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    html { background: #FAFAF8 !important; }
+    body {
+      color-scheme: only light;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.5;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 52px;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .nav-logo {
+      display: flex; flex-direction: column; gap: 1px;
+      text-decoration: none;
+    }
+    .nav-logo-main {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--purple-dk);
+    }
+    .nav-logo-sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px; font-style: italic;
+      color: var(--ink-faint); letter-spacing: 0.04em;
+    }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-link {
+      font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--ink-soft); text-decoration: none; transition: color .2s;
+    }
+    .nav-link:hover, .nav-link:focus { color: var(--purple); }
+    .nav-cta {
+      background: var(--purple); color: white;
+      font-size: 13px; font-weight: 500;
+      padding: 10px 24px; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .nav-cta:hover { background: var(--ink); transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--page);
+      min-height: 100vh;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 140px 52px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -120px; right: -80px;
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(107,63,160,0.12) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 28px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow::before {
+      content: ''; width: 36px; height: 1px; background: var(--purple);
+    }
+    .hero-h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 6.5vw, 96px);
+      font-weight: 300; line-height: 1.0;
+      color: var(--ink); max-width: 820px;
+      margin-bottom: 12px;
+    }
+    .hero-h1 em { font-style: italic; color: var(--purple); }
+    .hero-source {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; font-style: italic;
+      color: var(--ink-faint); margin-bottom: 40px;
+    }
+    .hero-thesis {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 2.8vw, 34px);
+      font-weight: 300; line-height: 1.35;
+      color: var(--ink-soft); max-width: 640px; margin-bottom: 48px;
+    }
+    .hero-thesis strong {
+      font-weight: 600; color: var(--ink);
+    }
+    .hero-cta-row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--purple); color: white;
+      font-size: 14px; font-weight: 500;
+      padding: 14px 32px; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .btn-primary:hover { background: var(--ink); transform: translateY(-2px); }
+    .btn-ghost {
+      font-size: 13px; color: var(--ink-soft);
+      text-decoration: none; border-bottom: 1px solid var(--rule);
+      padding-bottom: 2px; transition: color .2s, border-color .2s;
+    }
+    .btn-ghost:hover { color: var(--purple); border-color: var(--purple); }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      background: var(--purple-dk); padding: 11px 0; overflow: hidden;
+    }
+    .ticker { display: flex; animation: tick 18s linear infinite; white-space: nowrap; }
+    .ticker-item {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.6); padding: 0 36px;
+    }
+    .ticker-item::after { content: '·'; margin-left: 36px; color: rgba(255,255,255,0.25); }
+    @keyframes tick { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* ── SHARED ── */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 52px; }
+    .section-label {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.24em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 48px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::after { content: ''; flex:1; height: 1px; background: var(--rule); }
+
+    .fade-up { opacity: 0; transform: translateY(20px); transition: opacity .7s ease, transform .7s ease; }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── THESIS BAND ── */
+    .thesis-band {
+      background: var(--ink); padding: 72px 0;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .thesis-band-inner {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 60px; align-items: center;
+    }
+    .thesis-band-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px; font-style: italic;
+      color: rgba(255,255,255,0.35); line-height: 1.5;
+    }
+    .thesis-band-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(26px, 3vw, 42px);
+      font-weight: 300; color: white; line-height: 1.3;
+    }
+    .thesis-band-text em { font-style: italic; color: var(--purple-mid); }
+    .thesis-band-text strong { font-weight: 600; }
+
+    /* ── SERVICES ── */
+    .services {
+      background: #FAFAF8; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .services-intro {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 60px;
+      margin-bottom: 64px; align-items: end;
+    }
+    .services-h2 {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(40px, 4.5vw, 60px);
+      font-weight: 300; line-height: 1.05;
+    }
+    .services-h2 em { font-style: italic; color: var(--purple); }
+    .services-intro-text {
+      color: #3D3550 !important;
+      font-size: 15px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.8; max-width: 520px;
+    }
+
+    .services-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 2px; background: var(--rule);
+    }
+    .s-card {
+      background: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(107,63,160,0.07);
+      background: var(--white); padding: 44px 40px;
+      display: flex; flex-direction: column; gap: 18px;
+      transition: background .2s; position: relative; overflow: hidden;
+    }
+    .s-card:hover { background: var(--page-alt); }
+    .s-card::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      width: 0; height: 2px; background: var(--purple);
+      transition: width .35s ease;
+    }
+    .s-card:hover::after { width: 100%; }
+    .s-card.soon { background: var(--page); }
+    .s-card.soon:hover { background: var(--page); }
+    .s-card.soon::after { display: none; }
+
+    .s-top { display: flex; justify-content: space-between; align-items: center; }
+    .s-badge {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .s-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .s-badge.live { color: var(--purple); }
+    .s-badge.live .dot { background: var(--purple); }
+    .s-badge.soon { color: var(--ink-faint); }
+    .s-badge.soon .dot { background: var(--ink-faint); }
+    .s-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; color: var(--ink-faint);
+    }
+    .s-title {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 30px; font-weight: 600;
+      color: var(--ink); line-height: 1.1;
+    }
+    .s-soon .s-title { color: var(--ink-soft); }
+    .s-desc {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.75; flex: 1;
+    }
+    .s-link {
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--purple); text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      width: fit-content; border-bottom: 1px solid var(--purple-lt);
+      padding-bottom: 2px; transition: gap .2s;
+    }
+    .s-link:hover { gap: 10px; }
+    .s-link.muted { color: var(--ink-faint); border-color: var(--rule); }
+
+    /* ── CASE STUDIES ── */
+    .cases {
+      background: #F3EFF8; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .cases-grid { display: flex; flex-direction: column; gap: 2px; background: var(--rule); margin-top: 0; }
+    .case-row {
+      background: #FFFFFF !important;
+      box-shadow: 0 1px 3px rgba(107,63,160,0.06);
+      background: var(--white); padding: 40px 44px;
+      display: grid; grid-template-columns: 120px 1fr 200px;
+      gap: 40px; align-items: start;
+      transition: background .2s;
+    }
+    .case-row:hover {
+      background: #EDE5F8 !important; background: var(--page-alt); }
+    .case-tag {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--purple); padding-top: 4px; line-height: 1.4;
+    }
+    .case-body {
+      color-scheme: light; }
+    .case-title {
+      color: #0E0A1A !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600;
+      color: var(--ink); margin-bottom: 8px; line-height: 1.2;
+    }
+    .case-text {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.7;
+    }
+    .case-result {
+      text-align: right; padding-top: 4px;
+    }
+    .case-result-num {
+      color: #6B3FA0 !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px; font-weight: 300;
+      color: var(--purple); line-height: 1;
+    }
+    .case-result-label {
+      color: #8A7EA0 !important;
+      font-size: 11px; font-weight: 300;
+      color: var(--ink-faint); line-height: 1.4; margin-top: 4px;
+    }
+
+    /* ── ABOUT / FOUNDER ── */
+    .founder {
+      background: #FFFFFF; padding: 96px 0; border-bottom: 1px solid var(--rule); }
+    .founder-inner {
+      display: grid; grid-template-columns: 3fr 2fr; gap: 80px; align-items: start;
+    }
+    .founder-text {
+      color: #3D3550 !important;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 2.5vw, 32px);
+      font-weight: 300; line-height: 1.45;
+      color: var(--ink-soft);
+    }
+    .founder-text strong { font-weight: 600; color: var(--ink); }
+    .founder-text em { font-style: italic; color: var(--purple); }
+    .founder-name {
+      color: #8A7EA0 !important;
+      margin-top: 32px;
+      font-size: 13px; font-weight: 400;
+      color: var(--ink-faint); letter-spacing: 0.04em;
+    }
+    .founder-name strong { color: var(--ink-soft); font-weight: 500; }
+    .founder-pillars { padding-top: 12px; }
+    .pillar {
+      background: #FAFAF8;
+      padding: 24px 0; border-bottom: 1px solid var(--rule);
+    }
+    .pillar:first-child { border-top: 1px solid var(--rule); }
+    .pillar-label {
+      color: #6B3FA0 !important;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 8px;
+    }
+    .pillar-text {
+      color: #3D3550 !important;
+      font-size: 14px; font-weight: 300;
+      color: var(--ink-soft); line-height: 1.65;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--dark); padding: 96px 0;
+      position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: ''; position: absolute; top: -200px; right: -100px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(107,63,160,0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .cta-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .cta-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(34px, 4vw, 56px);
+      font-weight: 300; color: white; line-height: 1.1; margin-bottom: 20px;
+    }
+    .cta-h2 em { font-style: italic; color: var(--purple-mid); }
+    .cta-sub { font-size: 15px; font-weight: 300; color: rgba(255,255,255,0.45); line-height: 1.75; }
+    .cta-form {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 40px;
+    }
+    .form-head {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3); margin-bottom: 24px; display: block;
+    }
+    .f-input {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: white; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 300;
+      padding: 12px 16px; margin-bottom: 10px; outline: none;
+      transition: border-color .2s;
+    }
+    .f-input::placeholder { color: rgba(255,255,255,0.2); }
+    .f-input:focus { border-color: var(--purple-mid); }
+    select.f-input {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.25)' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    select.f-input option { background: #1A0A2E; }
+    .f-submit {
+      width: 100%; background: var(--purple); color: white;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 14px; border: none; cursor: pointer; margin-top: 6px;
+      transition: background .2s;
+    }
+    .f-submit:hover { background: #8B5FC0; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #040210; padding: 40px 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .footer-left {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .f-brand {
+      font-size: 12px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+    }
+    .f-tagline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px; font-style: italic;
+      color: rgba(255,255,255,0.5);
+    }
+    .f-email {
+      font-size: 13px; color: rgba(255,255,255,0.75);
+      text-decoration: none; transition: color .2s;
+    }
+    .f-email:hover { color: var(--purple-mid); }
+    .f-copy { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .fade-up { opacity: 1; transform: none; }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      nav { padding: 16px 24px; }
+      .nav-links { gap: 14px; }
+      .nav-link { font-size: 11px; }
+      .nav-cta { padding: 9px 14px; }
+      .hero {
+      background: var(--page); padding: 120px 24px 64px; }
+      .wrap { padding: 0 24px; }
+      .thesis-band-inner { grid-template-columns: 1fr; gap: 20px; }
+      .services-intro { grid-template-columns: 1fr; gap: 20px; }
+      .services-grid { grid-template-columns: 1fr; }
+      .case-row { grid-template-columns: 1fr; gap: 12px; }
+      .case-result { text-align: left; }
+      .founder-inner { grid-template-columns: 1fr; gap: 48px; }
+      .cta-inner { grid-template-columns: 1fr; gap: 40px; }
+      footer { flex-direction: column; align-items: flex-start; padding: 32px 24px; }
+    }
+  
+    .about-hero { min-height: 86vh; padding: 150px 52px 88px; background: var(--page); position: relative; overflow: hidden; }
+    .about-hero::before { content: ''; position: absolute; top: -140px; right: -100px; width: 620px; height: 620px; background: radial-gradient(circle, rgba(107,63,160,0.13) 0%, transparent 66%); pointer-events: none; }
+    .about-kicker { font-size: 12px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; color: var(--purple); margin-bottom: 28px; display: flex; gap: 12px; align-items: center; }
+    .about-kicker::before { content: ''; width: 36px; height: 1px; background: var(--purple); }
+    .about-h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(46px, 6vw, 88px); font-weight: 300; line-height: 1.02; max-width: 930px; margin-bottom: 28px; }
+    .about-h1 em { color: var(--purple); font-style: italic; }
+    .about-lede { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px, 2.5vw, 32px); font-weight: 300; line-height: 1.35; color: var(--ink-soft); max-width: 760px; margin-bottom: 42px; }
+    .section { padding: 92px 0; border-bottom: 1px solid var(--rule); background: var(--page); }
+    .section.alt { background: var(--page-alt); }
+    .intro-grid, .two-col { display: grid; grid-template-columns: 1fr 2fr; gap: 64px; align-items: start; }
+    .section-h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px,4vw,58px); font-weight: 300; line-height: 1.08; }
+    .section-h2 em { color: var(--purple); font-style: italic; }
+    .lead-copy { font-size: 16px; font-weight: 300; line-height: 1.85; color: var(--ink-soft); max-width: 720px; }
+    .lead-copy p + p { margin-top: 18px; }
+    .outcomes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: var(--rule); margin-top: 48px; }
+    .outcome { background: var(--white); padding: 34px; }
+    .outcome h3, .method h3, .story h3 { font-family: 'Cormorant Garamond', serif; font-size: 26px; line-height: 1.15; margin-bottom: 12px; color: var(--ink); }
+    .outcome p, .method p, .story p, .proof p, .arch-card p { color: var(--ink-soft); font-size: 14px; font-weight: 300; line-height: 1.75; }
+    .storyline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--rule); margin-top: 44px; }
+    .story { background: var(--white); padding: 30px; }
+    .story .num { font-family: 'Cormorant Garamond', serif; color: var(--purple); font-size: 18px; margin-bottom: 14px; display:block; }
+    .proof-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--rule); margin-top: 44px; }
+    .proof { background: var(--white); padding: 32px; }
+    .proof strong { display: block; font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 300; color: var(--purple); margin-bottom: 8px; }
+    .methods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--rule); margin-top: 44px; }
+    .method { background: var(--white); padding: 30px; }
+    .dark-band { background: var(--ink); color: white; padding: 86px 0; }
+    .dark-band .section-h2, .dark-band h2 { color: white; }
+    .dark-band p { color: rgba(255,255,255,.65); }
+    .arch { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: var(--rule); margin-top: 44px; }
+    .arch-card { background: var(--white); padding: 32px; }
+    .arch-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 28px; margin-bottom: 10px; }
+    .arch-card .tag { color: var(--purple); font-size: 10px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 12px; display:block; }
+    .legal-note { border-top: 1px solid var(--rule); margin-top: 44px; padding-top: 24px; font-size: 13px; color: var(--ink-faint); line-height: 1.7; }
+    @media (max-width: 860px) { .about-hero { padding: 128px 24px 70px; } .intro-grid, .two-col, .outcomes, .storyline, .proof-strip, .methods, .arch { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo"><span class="nav-logo-main">Chiibitsu Labs</span><span class="nav-logo-sub">more human, by design</span></a>
+  <div class="nav-links"><a href="/about/" class="nav-link">About</a><a href="mailto:labs@chiibitsu.com?subject=Working%20with%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="nav-cta">Work with us →</a></div>
+</nav>
+<main>
+<section class="about-hero">
+  <div class="wrap fade-up visible">
+    <div class="about-kicker">About Chiibitsu Labs</div>
+    <h1 class="about-h1">The future often arrives before people know they have <em>a choice.</em></h1>
+    <p class="about-lede">Chiibitsu Labs helps leaders understand what emerging technology changes, decide what matters, and turn those decisions into better workflows, clearer knowledge, stronger teams, and practical systems.</p>
+    <div class="hero-cta-row"><a href="mailto:labs@chiibitsu.com?subject=Working%20with%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="btn-primary">Work with us →</a><a href="#inside-business" class="btn-ghost">See what changes</a></div>
+  </div>
+</section>
+<section class="section" id="inside-business"><div class="wrap"><div class="intro-grid fade-up"><h2 class="section-h2">What changes <em>inside a business</em></h2><div class="lead-copy"><p>Chiibitsu Labs works where decisions, knowledge, workflows, behavior, and technology meet. The work is practical: find the real constraint, make the tradeoffs visible, and build a way of working that people can actually use.</p></div></div><div class="outcomes fade-up">
+  <div class="outcome"><h3>Founder bottlenecks reduce.</h3><p>When every important call escalates upward, the problem is usually structure, not effort. We clarify decision rights, standards, handoffs, and feedback loops so the right calls can happen at the right level.</p></div>
+  <div class="outcome"><h3>AI becomes repeatable work.</h3><p>Instead of disconnected prompting, teams learn where AI belongs, what context it needs, how output is checked, and when human judgment must stay in control.</p></div>
+  <div class="outcome"><h3>Knowledge becomes transferable.</h3><p>Founder judgment, institutional memory, handwritten notes, chats, and scattered documents are shaped into usable systems that other people can understand and maintain.</p></div>
+  <div class="outcome"><h3>Technology choices become clearer.</h3><p>Leaders see what a tool or trend will enable, cost, require, and risk before they invest in it, resist it, or reorganize work around it.</p></div>
+</div></div></section>
+<section class="section alt"><div class="wrap"><div class="two-col fade-up"><h2 class="section-h2">Why the company <em>exists</em></h2><div class="lead-copy"><p>Angeline “Chii” Viray founded Chiibitsu Labs from a repeated pattern: a new possibility appears before it is widely understood, and the people who see both the opportunity and hidden price first have more room to choose.</p><p>Startup Weekend showed her that ordinary people could build companies before that path felt available. Mobility showed how temporary platform incentives could make long-term vehicle commitments look safer than they were. Crypto showed how uneven access to information could change a person's options. AI is the current wave, with the same gap appearing at larger scale.</p></div></div><div class="storyline fade-up">
+  <div class="story"><span class="num">01</span><h3>Startup Weekend</h3><p>A first encounter with entrepreneurship as an available path, not a distant title earned only after years inside a ladder.</p></div>
+  <div class="story"><span class="num">02</span><h3>Mobility</h3><p>Beep a Ride was built as an additional income pathway when platform incentives made vehicle economics easy to misunderstand.</p></div>
+  <div class="story"><span class="num">03</span><h3>Crypto</h3><p>Learning from an early emerging-technology wave became community education and mentorship rather than private advantage.</p></div>
+  <div class="story"><span class="num">04</span><h3>AI</h3><p>The current work helps organizations use AI to strengthen judgment and workflow, not create shallow activity or tool dependence.</p></div>
+</div></div></section>
+<section class="section"><div class="wrap"><div class="intro-grid fade-up"><h2 class="section-h2">From insight to <em>operating proof</em></h2><div class="lead-copy"><p>The method comes from operating real systems under pressure: mobility operations, behavior-led programs, product direction, investor communication, regional market execution, and current AI incorporation work.</p></div></div><div class="proof-strip fade-up"><div class="proof"><strong>₱28M</strong><p>Peak quarterly revenue represented on the current site from technology-enabled mobility operations.</p></div><div class="proof"><strong>4K+</strong><p>Participants served through behavior systems and personal-development program work represented on the current site.</p></div><div class="proof"><strong>0→1</strong><p>New-market and product-direction experience across fintech, AI, Web3, and mobility contexts.</p></div></div></div></section>
+<section class="section alt"><div class="wrap"><div class="intro-grid fade-up"><h2 class="section-h2">What Chiibitsu Labs <em>actually does</em></h2><div class="lead-copy"><p>The work follows the choice from diagnosis to implementation, then leaves capability behind.</p></div></div><div class="methods fade-up"><div class="method"><h3>Understand the choice</h3><p>Clarify what is changing, what decision actually needs to be made, and what each path enables, costs, or requires.</p></div><div class="method"><h3>Redesign the system</h3><p>Map decisions, workflows, knowledge, roles, handoffs, standards, incentives, controls, and accountability around the chosen direction.</p></div><div class="method"><h3>Build it into real work</h3><p>Train people using real tasks, implement bounded workflows and tools, and create feedback loops that improve the system.</p></div><div class="method"><h3>Leave capability behind</h3><p>Document the logic and enable the team to continue adapting without permanent dependence on Chiibitsu Labs.</p></div></div></div></section>
+<section class="dark-band"><div class="wrap"><div class="two-col fade-up"><h2 class="section-h2">Why systems and behavior belong together.</h2><div class="lead-copy"><p>A process may exist, but people work around it. Data may exist, but nobody trusts it. A company may adopt AI without changing how decisions are made. Capable people can still fail inside systems that reward or require the wrong behavior.</p><p>Systems architecture looks at how decisions, roles, workflows, information, tools, incentives, controls, and accountability fit together. Behavioral strategy looks at how real people understand, adopt, avoid, remember, communicate, decide, and act inside that system. Changing one without the other rarely holds.</p></div></div></div></section>
+<section class="section"><div class="wrap"><div class="intro-grid fade-up"><h2 class="section-h2">The Futureproof <em>architecture</em></h2><div class="lead-copy"><p>Futureproof is the flagship platform under Chiibitsu Labs. It is designed to remain useful across successive waves of technological change: crypto was one wave, AI is the current urgent wave, and the next wave will bring new choices.</p></div></div><div class="arch fade-up"><div class="arch-card"><span class="tag">Futureproof Work</span><h3>AI @ Work</h3><p>Helps companies identify valuable AI use cases, redesign real workflows, train teams, organize knowledge, establish practical standards, and implement repeatable AI-assisted ways of working.</p></div><div class="arch-card"><span class="tag">Futureproof Work</span><h3>Lighthouse</h3><p>A strategic decision and operating-systems engagement for founders and leadership teams facing complex operational or technological change.</p></div><div class="arch-card"><span class="tag">Futureproof Self</span><h3>Crypto Mentorship</h3><p>An individual-facing expression from a previous emerging-technology wave, focused on clearer understanding of crypto, market behavior, risks, and choices. It is not financial advice.</p></div><div class="arch-card"><span class="tag">Learning + Lab</span><h3>Field Notes and R&D Lab</h3><p>Field Notes holds finished public learning. The R&D Lab holds prototypes and developing concepts, not automatically current commercial offers.</p></div></div></div></section>
+<section class="section alt"><div class="wrap"><div class="two-col fade-up"><h2 class="section-h2">Conscious choice, <em>in plain language</em></h2><div class="lead-copy"><p>There is not one correct response to technological change. Every path carries consequences: benefits, costs, dependencies, risks, responsibilities, and tradeoffs.</p><p>Chiibitsu Labs does not decide for the client. It makes the real options visible, then helps build the workflows, knowledge, standards, and operating systems required for the choice the client makes.</p></div></div></div></section>
+<section class="section"><div class="wrap"><div class="two-col fade-up"><h2 class="section-h2">The founder behind <em>the work</em></h2><div class="lead-copy"><p>Angeline “Chii” Viray is the founder of Chiibitsu Labs and serves as Principal Systems Architect and Behavioral Strategist. She remains directly involved in diagnosis, architecture, and core delivery.</p><p>Her work spans technology-enabled mobility operations, behavior design, emerging-technology education, product and investor narratives, AI/Web3 market execution, and practical AI incorporation for teams.</p><p class="legal-note">Chiibitsu Labs is the trade name used by Angeline S. Viray, a professional business consultant registered in the Philippines. Consulting services, programs, invoices, and payments are provided or issued by Angeline S. Viray under the Chiibitsu Labs trade name.</p></div></div></div></section>
+<section class="cta-section" id="work-with-us"><div class="wrap"><div class="cta-inner"><div class="fade-up"><h2 class="cta-h2">Make the choice before circumstance makes it for you.</h2><p class="cta-sub">Bring a changing technology, unclear decision, stuck workflow, knowledge problem, or operating constraint. We will tell you honestly if and how Chiibitsu Labs can help.</p><div style="margin-top:28px"><a href="mailto:labs@chiibitsu.com?subject=Working%20with%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="btn-primary">Work with us →</a></div></div><div class="cta-form fade-up" style="transition-delay:.12s"><span class="form-head">Start here</span><iframe src="https://tally.so/embed/7RMK0P?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" data-tally-src="https://tally.so/embed/7RMK0P?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" width="100%" height="400" frameborder="0" marginheight="0" marginwidth="0" title="Work with Chiibitsu Labs" style="border:none; background:transparent;"></iframe><script>var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally&&Tally.loadEmbeds()};if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}else{v();}</script></div></div></div></section>
+</main>
+<footer><div class="footer-left"><span class="f-brand">Chiibitsu Labs</span><span class="f-tagline">more human, by design</span><span class="f-tagline">Chiibitsu Labs is the trade name of Angeline S. Viray, a professional business consultant registered in the Philippines.</span></div><a href="mailto:labs@chiibitsu.com?subject=Hello%20Chiibitsu%20Labs" class="f-email">labs@chiibitsu.com</a><span class="f-copy">© 2026 Chiibitsu Labs. All rights reserved.</span></footer>
+<script>const obs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.1});document.querySelectorAll('.fade-up').forEach(el=>obs.observe(el));</script>
+</body></html>
