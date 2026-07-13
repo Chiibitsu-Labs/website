@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chiibitsu Labs — More Human, by Design</title>
   <meta name="color-scheme" content="only light" />
-  <meta name="description" content="Chiibitsu Labs helps people and organizations become more human, by design — at the intersection of behavior, systems thinking, and emerging technology." />
+  <meta name="description" content="Chiibitsu Labs helps people and organizations make clearer choices and build practical systems around emerging technology, with AI as today's urgent wave." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -71,6 +71,12 @@
       font-size: 11px; font-style: italic;
       color: var(--ink-faint); letter-spacing: 0.04em;
     }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-link {
+      font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--ink-soft); text-decoration: none; transition: color .2s;
+    }
+    .nav-link:hover, .nav-link:focus { color: var(--purple); }
     .nav-cta {
       background: var(--purple); color: white;
       font-size: 13px; font-weight: 500;
@@ -437,9 +443,18 @@
     .f-email:hover { color: var(--purple-mid); }
     .f-copy { font-size: 11px; color: rgba(255,255,255,0.4); }
 
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .fade-up { opacity: 1; transform: none; }
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 860px) {
       nav { padding: 16px 24px; }
+      .nav-links { gap: 14px; }
+      .nav-link { font-size: 11px; }
+      .nav-cta { padding: 9px 14px; }
       .hero {
       background: var(--page); padding: 120px 24px 64px; }
       .wrap { padding: 0 24px; }
@@ -458,11 +473,14 @@
 
 <!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo">
+  <a href="/" class="nav-logo">
     <span class="nav-logo-main">Chiibitsu Labs</span>
     <span class="nav-logo-sub">more human, by design</span>
   </a>
-  <a href="mailto:labs@chiibitsu.com?subject=Working%20with%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="nav-cta">Work with us →</a>
+  <div class="nav-links">
+    <a href="/about/" class="nav-link">About</a>
+    <a href="mailto:labs@chiibitsu.com?subject=Working%20with%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%27d%20like%20to%20explore%20working%20with%20Chiibitsu%20Labs.%0A%0AHere%27s%20what%20I%27m%20working%20on%3A%0A%0A" class="nav-cta">Work with us →</a>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -516,9 +534,8 @@
         What we believe
       </p>
       <p class="thesis-band-text">
-        AI doesn't replace humans. It removes the need for humans to <em>behave like machines.</em>
-        The real question isn't how to use AI —
-        it's <strong>who you need to become</strong> now that it's here.
+        Emerging technology changes the cost of ordinary choices before everyone can see it.
+        AI is today's urgent wave; the deeper work is helping people and organizations choose with their eyes open.
       </p>
     </div>
   </div>
@@ -530,7 +547,7 @@
     <div class="services-intro fade-up">
       <h2 class="services-h2">What<br><em>we do</em></h2>
       <p class="services-intro-text">
-        Each area of work built on the same foundation — honest, systems-level thinking that puts the human at the center, not the technology.
+        Each area of work sits under Futureproof, the flagship platform for turning emerging-technology change into clearer decisions, better workflows, and more transferable knowledge.
       </p>
     </div>
     <div class="services-grid">
@@ -575,7 +592,7 @@
           <span class="s-num">04</span>
         </div>
         <h3 class="s-title">Futureproof</h3>
-        <p class="s-desc">A platform for individuals navigating the AI era — discover your human edge, find your next move, and build proof of value before the world decides for you. Built for people who want to stay irreplaceable without becoming someone they're not.</p>
+        <p class="s-desc">The flagship platform for people and organizations navigating successive waves of technological change. Futureproof Self supports individual learning and choices; Futureproof Work houses organizational systems such as AI @ Work and Lighthouse.</p>
         <a href="https://futureproof.chiibitsu.com" class="s-link">Join the waitlist →</a>
       </div>
 
@@ -689,7 +706,7 @@
           We don't sell tools. We don't sell hype. We build the systems and thinking that help humans stay irreplaceable — not by becoming more like machines, but by becoming <em>more themselves.</em>
         </p>
         <p class="founder-name">
-          Founded by <strong><a href="https://linkedin.com/in/angelinev" target="_blank" style="color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule);">Angeline "Chii" Viray</a></strong> — systems architect, behavior designer, emerging tech strategist.
+          Founded by <strong><a href="/about/" style="color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule);">Angeline "Chii" Viray</a></strong>, Principal Systems Architect and Behavioral Strategist. <a href="/about/" style="color:var(--purple); text-decoration:none; border-bottom:1px solid var(--rule);">Meet the founder</a>.
         </p>
       </div>
       <div class="founder-pillars fade-up" style="transition-delay:.1s">
@@ -740,6 +757,7 @@
   <div class="footer-left">
     <span class="f-brand">Chiibitsu Labs</span>
     <span class="f-tagline">more human, by design</span>
+    <span class="f-tagline">Chiibitsu Labs is the trade name of Angeline S. Viray, a professional business consultant registered in the Philippines.</span>
   </div>
   <a href="mailto:labs@chiibitsu.com?subject=Hello%20Chiibitsu%20Labs&body=Hi%20Chii%2C%0A%0AI%20came%20across%20Chiibitsu%20Labs%20and%20wanted%20to%20reach%20out.%0A%0A" class="f-email">labs@chiibitsu.com</a>
   <span class="f-copy">© 2026 Chiibitsu Labs. All rights reserved.</span>
