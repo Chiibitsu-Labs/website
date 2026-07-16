@@ -22,6 +22,11 @@ const DURATIONS = [
   { label: '2 hours', value: 120 },
   { label: '3 hours', value: 180 },
   { label: '4 hours', value: 240 },
+  { label: '5 hours', value: 300 },
+  { label: '6 hours', value: 360 },
+  { label: '7 hours', value: 420 },
+  { label: '8 hours', value: 480 },
+  { label: '9 hours', value: 540 },
 ];
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -47,6 +52,9 @@ interface FormState {
   bookingWindowWeeks: number;
   calendarId: string;
   slug: string;
+  isPaid: boolean;
+  locationType: 'online' | 'in_person';
+  calendarEventTitleTemplate: string;
 }
 
 function projectToForm(p?: Project): FormState {
@@ -63,6 +71,9 @@ function projectToForm(p?: Project): FormState {
     bookingWindowWeeks: p?.bookingWindowWeeks ?? 4,
     calendarId: p?.calendarId ?? '',
     slug: p?.slug ?? '',
+    isPaid: p?.isPaid ?? false,
+    locationType: p?.locationType ?? 'online',
+    calendarEventTitleTemplate: p?.calendarEventTitleTemplate ?? '',
   };
 }
 
@@ -155,6 +166,9 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
       customFields: form.customFields,
       bookingWindowWeeks: form.bookingWindowWeeks,
       calendarId: form.calendarId || undefined,
+      isPaid: form.isPaid,
+      locationType: form.locationType,
+      calendarEventTitleTemplate: form.calendarEventTitleTemplate || undefined,
     };
 
     const url = isNew ? '/api/admin/projects' : `/api/admin/projects/${project!.slug}`;
@@ -393,6 +407,46 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
 
             {/* Settings */}
             <Section title="Settings">
+              <Field label="Session type">
+                <button
+                  type="button"
+                  onClick={() => setField('isPaid', !form.isPaid)}
+                  className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition ${
+                    form.isPaid
+                      ? 'bg-amber-600/20 text-amber-300 border border-amber-600/40'
+                      : 'bg-green-900/20 text-green-400 border border-green-700/40'
+                  }`}
+                >
+                  <span>{form.isPaid ? '💰' : '✓'}</span>
+                  {form.isPaid ? 'Paid session' : 'Free session'}
+                </button>
+              </Field>
+              <Field label="Location">
+                <button
+                  type="button"
+                  onClick={() => setField('locationType', form.locationType === 'online' ? 'in_person' : 'online')}
+                  className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition ${
+                    form.locationType === 'in_person'
+                      ? 'bg-blue-600/20 text-blue-300 border border-blue-600/40'
+                      : 'bg-violet-600/20 text-violet-300 border border-violet-600/40'
+                  }`}
+                >
+                  <span>{form.locationType === 'in_person' ? '📍' : '💻'}</span>
+                  {form.locationType === 'in_person' ? 'Face to face' : 'Online'}
+                </button>
+              </Field>
+              <Field
+                label="Calendar invite title"
+                hint="Tokens: {project} {company} {department} {booker}. Leave blank for the default: [{project}] {company} - {department}"
+              >
+                <input
+                  type="text"
+                  value={form.calendarEventTitleTemplate}
+                  onChange={(e) => setField('calendarEventTitleTemplate', e.target.value)}
+                  placeholder="[{project}] {company} - {department}"
+                  className="admin-input"
+                />
+              </Field>
               <Field label="Booking window" hint="How far ahead someone can book">
                 <select
                   value={form.bookingWindowWeeks}

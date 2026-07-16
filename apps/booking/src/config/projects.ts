@@ -43,6 +43,16 @@ export interface Project {
   blockedDates?: string[];
   // How many weeks ahead can someone book?
   bookingWindowWeeks: number;
+  // Whether this is a paid session
+  isPaid?: boolean;
+  // Display order on the homepage (lower = first)
+  sortOrder?: number;
+  // Where the session takes place
+  locationType?: 'online' | 'in_person';
+  // Template for the Google Calendar invite title. Supports {project}, {company},
+  // {department}, {booker} tokens. Falls back to "[{project}] {company} - {department}"
+  // when not set.
+  calendarEventTitleTemplate?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,10 +75,10 @@ export const SEED_PROJECTS: Project[] = [
       emoji: '⚡',
     },
     timeSlots: [
-      // Tuesday and Thursday, 9 AM–1 PM session
-      { days: [2, 4], startHour: 9, startMinute: 0 },
-      // Tuesday and Thursday, 1 PM–5 PM session
-      { days: [2, 4], startHour: 13, startMinute: 0 },
+      // Tuesday and Wednesday, 9 AM–1 PM (morning session)
+      { days: [2, 3], startHour: 9, startMinute: 0 },
+      // Tuesday and Wednesday, 1 PM–5 PM (afternoon session)
+      { days: [2, 3], startHour: 13, startMinute: 0 },
     ],
     customFields: [
       {
@@ -80,10 +90,17 @@ export const SEED_PROJECTS: Project[] = [
       },
       {
         id: 'team_size',
-        label: 'Estimated team size attending',
-        type: 'select',
-        options: ['1–5', '6–15', '16–30', '30+'],
+        label: 'Number of attendees (minimum 10 seats)',
+        type: 'text',
         required: true,
+        placeholder: 'e.g. 12',
+      },
+      {
+        id: 'department',
+        label: 'Department or team attending (optional)',
+        type: 'text',
+        required: false,
+        placeholder: 'e.g. Operations, HR, Product…',
       },
       {
         id: 'use_case_focus',
@@ -94,6 +111,7 @@ export const SEED_PROJECTS: Project[] = [
       },
     ],
     bookingWindowWeeks: 8,
+    isPaid: true,
   },
   {
     slug: 'aicos-fit-call',
@@ -149,7 +167,7 @@ export const SEED_PROJECTS: Project[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const siteConfig = {
-  ownerName: 'Chii',
+  ownerName: 'Chiibitsu Labs',
   brandName: 'Chiibitsu Labs',
   tagline: 'Book a session',
   timezone: process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila',

@@ -1,7 +1,8 @@
 import { google } from 'googleapis';
-import { addMinutes, format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
+import { formatDuration } from './utils';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -123,6 +124,76 @@ export interface BookingDetails {
   startISO: string;
   endISO: string;
   customFields: Record<string, string>;
+  calendarEventTitleTemplate?: string;
+  projectDescription?: string;
+  locationType?: 'online' | 'in_person';
+}
+
+// Turn a custom-field id into a readable label, e.g. "company_name" → "Company name".
+function prettifyKey(key: string): string {
+  const spaced = key.replace(/[_-]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// Warm, client-facing invite body. The booker is an attendee, so this is what
+// they read inside their calendar — keep it professional and reassuring.
+function buildEventDescription(booking: BookingDetails): string {
+  const zonedStart = toZonedTime(new Date(booking.startISO), TIMEZONE);
+  const zonedEnd = toZonedTime(new Date(booking.endISO), TIMEZONE);
+  const durationLabel = formatDuration(
+    differenceInMinutes(new Date(booking.endISO), new Date(booking.startISO)),
+  );
+
+  const locationLine =
+    booking.locationType === 'in_person'
+      ? '📍 In person — we\'ll confirm the exact venue with you'
+      : '💻 Online — we\'ll send the joining link before we start';
+
+  const detailRows = [
+    `Name: ${booking.bookerName}`,
+    `Email: ${booking.bookerEmail}`,
+    booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
+    booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
+    ...Object.entries(booking.customFields)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${prettifyKey(k)}: ${v}`),
+  ].filter(Boolean);
+
+  const lines = [
+    `Hi ${booking.bookerName}! 👋 You're booked for ${booking.projectName} with ${booking.company}.`,
+    booking.projectDescription ? `\n${booking.projectDescription}` : null,
+    ``,
+    `🗓  ${format(zonedStart, 'EEEE, MMMM d, yyyy')}`,
+    `🕐  ${format(zonedStart, 'h:mm a')} – ${format(zonedEnd, 'h:mm a')} (Philippine time · UTC+8)`,
+    `⏱  ${durationLabel}`,
+    locationLine,
+    ``,
+    `──────────────────`,
+    `Your details`,
+    ...detailRows,
+    `──────────────────`,
+    ``,
+    `Need to reschedule or cancel? Just reply to your confirmation email and we'll sort it out.`,
+    ``,
+    `— Chiibitsu Labs`,
+  ].filter((l) => l !== null);
+
+  return lines.join('\n');
+}
+
+const DEFAULT_EVENT_TITLE_TEMPLATE = '[{project}] {company} - {department}';
+
+function renderEventTitle(
+  template: string,
+  vars: { project: string; company: string; department: string; booker: string },
+): string {
+  let result = vars.department ? template : template.replace(/\s*-\s*\{department\}/g, '');
+  result = result
+    .replace(/\{project\}/g, vars.project)
+    .replace(/\{company\}/g, vars.company)
+    .replace(/\{department\}/g, vars.department)
+    .replace(/\{booker\}/g, vars.booker);
+  return result;
 }
 
 export async function createBookingEvent(
@@ -135,31 +206,21 @@ export async function createBookingEvent(
   const zonedStart = toZonedTime(new Date(booking.startISO), TIMEZONE);
   const zonedEnd = toZonedTime(new Date(booking.endISO), TIMEZONE);
 
-  const customFieldsText = Object.entries(booking.customFields)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('\n');
-
-  const descriptionParts = [
-    `📅 Booking via Chiibitsu Labs`,
-    ``,
-    `Project: ${booking.projectName} (${booking.company})`,
-    ``,
-    `─── Booker Details ───`,
-    `Name: ${booking.bookerName}`,
-    `Email: ${booking.bookerEmail}`,
-    booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
-    booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
-    customFieldsText ? `\n─── Additional Info ───\n${customFieldsText}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  // Build event title from the project's template (default: "[Project] Company - Department")
+  const company =
+    booking.customFields.company_name || booking.bookerCompany || booking.bookerName;
+  const department = booking.customFields.department ?? '';
+  const eventSummary = renderEventTitle(
+    booking.calendarEventTitleTemplate || DEFAULT_EVENT_TITLE_TEMPLATE,
+    { project: booking.projectName, company, department, booker: booking.bookerName },
+  );
 
   const event = await calendar.events.insert({
     calendarId: calId,
+    sendUpdates: 'all',
     requestBody: {
-      summary: `[${booking.projectName}] ${booking.bookerName}`,
-      description: descriptionParts,
+      summary: eventSummary,
+      description: buildEventDescription(booking),
       start: {
         dateTime: booking.startISO,
         timeZone: TIMEZONE,
@@ -187,6 +248,12 @@ export async function createBookingEvent(
     eventId: event.data.id ?? '',
     eventLink: event.data.htmlLink ?? '',
   };
+}
+
+export async function cancelBookingEvent(eventId: string, calendarId?: string): Promise<void> {
+  const calendar = getCalendarClient();
+  const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  await calendar.events.delete({ calendarId: calId, eventId, sendUpdates: 'all' });
 }
 
 export interface AdminBooking {

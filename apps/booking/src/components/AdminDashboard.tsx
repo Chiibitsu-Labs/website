@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AdminBooking } from '@/lib/google-calendar';
 import type { Project } from '@/config/projects';
 import { ProjectEditor } from './ProjectEditor';
@@ -25,11 +25,12 @@ function LoginScreen({ onLogin }: { onLogin: (email: string, password: string) =
     const res = await fetch('/api/admin/bookings', {
       headers: { 'x-admin-email': email, 'x-admin-password': password },
     });
-    if (res.ok) {
-      onLogin(email, password);
-    } else {
+    if (res.status === 401) {
       setError('Incorrect email or password.');
       setLoading(false);
+    } else {
+      // Any non-401 response (200 or even 500 from GCal not configured) means auth passed
+      onLogin(email, password);
     }
   }
 
@@ -113,7 +114,7 @@ export function AdminDashboard() {
 
 function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filterSlug, setFilterSlug] = useState('all');
 
   async function load() {
@@ -126,18 +127,10 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     setLoading(false);
   }
 
-  if (!bookings && !loading) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-gray-400 mb-4">Load your upcoming bookings</p>
-        <button onClick={load} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-sm font-semibold transition">
-          Load bookings
-        </button>
-      </div>
-    );
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []);
 
-  if (loading) return <Spinner />;
+  if (loading && !bookings) return <Spinner />;
 
   const uniqueSlugs = Array.from(new Set((bookings ?? []).map((b) => b.projectSlug)));
   const filtered = filterSlug === 'all' ? bookings! : bookings!.filter((b) => b.projectSlug === filterSlug);
@@ -157,7 +150,15 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
       {filtered.length === 0 ? (
         <p className="text-gray-500 text-center py-12">No upcoming bookings.</p>
       ) : (
-        <div className="space-y-3">{filtered.map((b) => <BookingRow key={b.eventId} booking={b} />)}</div>
+        <div className="space-y-3">{filtered.map((b) => (
+          <BookingRow
+            key={b.eventId}
+            booking={b}
+            adminEmail={adminEmail}
+            adminPassword={adminPassword}
+            onCancel={load}
+          />
+        ))}</div>
       )}
     </div>
   );
@@ -167,7 +168,7 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminPassword: string }) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminProject | 'new' | null>(null);
   const [noDb, setNoDb] = useState(false);
 
@@ -180,6 +181,35 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     const data = await res.json();
     setProjects(data.projects ?? []);
     setLoading(false);
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []);
+
+  async function reorder(idx: number, direction: 'up' | 'down') {
+    const list = projects!;
+    const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (otherIdx < 0 || otherIdx >= list.length) return;
+    const a = list[idx];
+    const b = list[otherIdx];
+    // Assign the target index as sort_order so the swap works even when all
+    // projects currently have the same sort_order value (e.g. 0 on first use).
+    const results = await Promise.all([
+      fetch(`/api/admin/projects/${a.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+        body: JSON.stringify({ sortOrder: otherIdx }),
+      }),
+      fetch(`/api/admin/projects/${b.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+        body: JSON.stringify({ sortOrder: idx }),
+      }),
+    ]);
+    if (results.some(r => !r.ok)) {
+      alert('Reorder failed — make sure the database migration has been run (sort_order column required).');
+    }
+    load();
   }
 
   async function toggleActive(p: AdminProject) {
@@ -202,7 +232,11 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   async function handleSeed() {
     if (!confirm('Load the 2 default projects (AI @ Work and AICOS Fit Call) into the database?')) return;
-    await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    const res = await fetch('/api/admin/seed', { method: 'POST', headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword } });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Seed failed: ${body.error ?? res.statusText}\n\nMake sure the booking_projects table exists in Supabase. Go to the Setup tab for the SQL to create it.`);
+    }
     load();
   }
 
@@ -219,18 +253,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
     );
   }
 
-  if (!projects && !loading) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-gray-400 mb-4">Manage your booking projects</p>
-        <button onClick={load} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-sm font-semibold transition">
-          Load projects
-        </button>
-      </div>
-    );
-  }
-
-  if (loading) return <Spinner />;
+  if (loading && !projects) return <Spinner />;
 
   return (
     <div>
@@ -261,16 +284,44 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
         </div>
       </div>
 
-      {projects!.length === 0 ? (
+      {(projects ?? []).length === 0 ? (
         <p className="text-gray-500 text-center py-12">No projects yet. Create one or tap &quot;Load defaults&quot; to start with the 2 pre-configured projects.</p>
       ) : (
         <div className="space-y-3">
-          {projects!.map((p) => (
+          {(projects ?? []).map((p, idx) => (
             <div key={p.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center gap-4 ${!p.isActive ? 'opacity-50' : ''}`}>
+              {/* Reorder buttons */}
+              <div className="flex flex-col shrink-0">
+                <button
+                  onClick={() => reorder(idx, 'up')}
+                  disabled={idx === 0}
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
+                  title="Move up"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => reorder(idx, 'down')}
+                  disabled={idx === (projects ?? []).length - 1}
+                  className="p-2.5 text-gray-600 hover:text-gray-300 disabled:opacity-20 transition active:scale-95"
+                  title="Move down"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.branding.emoji && <span>{p.branding.emoji}</span>}
                   <span className="text-white font-semibold text-sm">{p.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    p.isPaid ? 'bg-amber-900/40 text-amber-400' : 'bg-green-900/30 text-green-400'
+                  }`}>
+                    {p.isPaid ? 'Paid' : 'Free'}
+                  </span>
                   {!p.isActive && <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded-full">Paused</span>}
                 </div>
                 <p className="text-gray-400 text-xs mt-0.5">{p.company} · /{p.slug}</p>
@@ -296,7 +347,7 @@ function ProjectsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
 // ─── Setup Tab ────────────────────────────────────────────────────────────────
 
-const SQL_SNIPPET = `CREATE TABLE booking_projects (
+const SQL_SNIPPET = `CREATE TABLE IF NOT EXISTS booking_projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -312,8 +363,19 @@ const SQL_SNIPPET = `CREATE TABLE booking_projects (
   blocked_dates TEXT[] NOT NULL DEFAULT '{}',
   calendar_id TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_paid BOOLEAN NOT NULL DEFAULT false,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  location_type TEXT NOT NULL DEFAULT 'online',
+  calendar_event_title_template TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);`;
+);
+
+-- Run this if the table already exists:
+ALTER TABLE booking_projects
+  ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS location_type TEXT NOT NULL DEFAULT 'online',
+  ADD COLUMN IF NOT EXISTS calendar_event_title_template TEXT;`;
 
 function SetupTab({ adminPassword }: { adminPassword: string }) {
   const [copied, setCopied] = useState(false);
@@ -417,9 +479,49 @@ function Spinner() {
   );
 }
 
-function BookingRow({ booking }: { booking: AdminBooking }) {
+function BookingRow({
+  booking,
+  adminEmail,
+  adminPassword,
+  onCancel,
+}: {
+  booking: AdminBooking;
+  adminEmail: string;
+  adminPassword: string;
+  onCancel: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const customEntries = Object.entries(booking.customFields).filter(([, v]) => v);
+
+  async function handleCancel() {
+    if (!confirm(`Cancel booking for ${booking.bookerName} on ${booking.dateLabel}?\n\nThis will delete the Google Calendar event.`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch('/api/admin/cancel-booking', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': adminEmail,
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({
+          eventId: booking.eventId,
+          bookerName: booking.bookerName,
+          projectName: booking.projectName,
+          dateLabel: booking.dateLabel,
+        }),
+      });
+      if (res.ok) {
+        onCancel();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Cancel failed: ${data.error ?? 'Unknown error'}`);
+      }
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -442,12 +544,21 @@ function BookingRow({ booking }: { booking: AdminBooking }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {expanded && (booking.bookerCompany || customEntries.length > 0) && (
+      {expanded && (
         <div className="border-t border-gray-800 px-5 py-4">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {booking.bookerCompany && (<><dt className="text-xs text-gray-500">Company</dt><dd className="text-xs text-gray-300">{booking.bookerCompany}</dd></>)}
-            {customEntries.map(([k, v]) => (<><dt key={`k-${k}`} className="text-xs text-gray-500">{k}</dt><dd key={`v-${k}`} className="text-xs text-gray-300">{v}</dd></>))}
-          </dl>
+          {(booking.bookerCompany || customEntries.length > 0) && (
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mb-4">
+              {booking.bookerCompany && (<><dt className="text-xs text-gray-500">Company</dt><dd className="text-xs text-gray-300">{booking.bookerCompany}</dd></>)}
+              {customEntries.map(([k, v]) => (<><dt key={`k-${k}`} className="text-xs text-gray-500">{k}</dt><dd key={`v-${k}`} className="text-xs text-gray-300">{v}</dd></>))}
+            </dl>
+          )}
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="px-3 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-900/30 transition disabled:opacity-50"
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel booking'}
+          </button>
         </div>
       )}
     </div>

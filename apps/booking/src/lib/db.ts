@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import type { Project, TimeSlotTemplate, CustomField } from '@/config/projects';
 import { SEED_PROJECTS } from '@/config/projects';
@@ -18,6 +19,10 @@ interface ProjectRow {
   blocked_dates: string[];
   calendar_id: string | null;
   is_active: boolean;
+  is_paid: boolean;
+  sort_order: number;
+  location_type: string | null;
+  calendar_event_title_template: string | null;
   created_at: string;
 }
 
@@ -51,10 +56,15 @@ function rowToProject(row: ProjectRow): Project {
     bookingWindowWeeks: row.booking_window_weeks,
     blockedDates: row.blocked_dates ?? [],
     calendarId: row.calendar_id ?? undefined,
+    isPaid: row.is_paid ?? false,
+    sortOrder: row.sort_order ?? 0,
+    locationType: row.location_type === 'in_person' ? 'in_person' : 'online',
+    calendarEventTitleTemplate: row.calendar_event_title_template ?? undefined,
   };
 }
 
 export async function getProjects(): Promise<Project[]> {
+  noStore(); // never serve a cached project list — admin edits must show immediately
   const client = getClient();
   if (!client) return SEED_PROJECTS;
 
@@ -62,16 +72,19 @@ export async function getProjects(): Promise<Project[]> {
     .from('booking_projects')
     .select('*')
     .eq('is_active', true)
-    .order('created_at');
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('DB getProjects error:', error);
     return SEED_PROJECTS;
   }
-  return (data ?? []).map(rowToProject);
+  const rows = (data ?? []).map(rowToProject);
+  return rows.length > 0 ? rows : SEED_PROJECTS;
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
+  noStore(); // always read the live row so admin changes (location, colour, copy) show immediately
   const client = getClient();
   if (!client) {
     return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
@@ -84,18 +97,24 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     .eq('is_active', true)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('DB getProjectBySlug error:', error);
+    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  }
+  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
   return rowToProject(data);
 }
 
 export async function getAllProjectsAdmin(): Promise<(Project & { isActive: boolean; id: string })[]> {
+  noStore();
   const client = getClient();
   if (!client) return [];
 
   const { data, error } = await client
     .from('booking_projects')
     .select('*')
-    .order('created_at');
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) throw error;
   return (data ?? []).map((row: ProjectRow) => ({
@@ -118,6 +137,10 @@ export interface ProjectInput {
   customFields: CustomField[];
   bookingWindowWeeks: number;
   calendarId?: string;
+  isPaid?: boolean;
+  sortOrder?: number;
+  locationType?: 'online' | 'in_person';
+  calendarEventTitleTemplate?: string;
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
@@ -139,6 +162,10 @@ export async function createProject(input: ProjectInput): Promise<Project> {
       custom_fields: input.customFields,
       booking_window_weeks: input.bookingWindowWeeks,
       calendar_id: input.calendarId ?? null,
+      is_paid: input.isPaid ?? false,
+      sort_order: input.sortOrder ?? 0,
+      location_type: input.locationType ?? 'online',
+      calendar_event_title_template: input.calendarEventTitleTemplate ?? null,
       is_active: true,
     })
     .select()
@@ -164,6 +191,10 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
   if (input.customFields !== undefined) patch.custom_fields = input.customFields;
   if (input.bookingWindowWeeks !== undefined) patch.booking_window_weeks = input.bookingWindowWeeks;
   if ('calendarId' in input) patch.calendar_id = input.calendarId ?? null;
+  if (input.isPaid !== undefined) patch.is_paid = input.isPaid;
+  if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
+  if (input.locationType !== undefined) patch.location_type = input.locationType;
+  if ('calendarEventTitleTemplate' in input) patch.calendar_event_title_template = input.calendarEventTitleTemplate ?? null;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
 
   const { data, error } = await client
@@ -194,7 +225,7 @@ export async function seedProjects(): Promise<void> {
   if (!client) throw new Error('Database not configured');
 
   for (const p of SEED_PROJECTS) {
-    await client.from('booking_projects').upsert(
+    const { error } = await client.from('booking_projects').upsert(
       {
         slug: p.slug,
         name: p.name,
@@ -211,7 +242,8 @@ export async function seedProjects(): Promise<void> {
         calendar_id: p.calendarId ?? null,
         is_active: true,
       },
-      { onConflict: 'slug', ignoreDuplicates: true },
+      { onConflict: 'slug' },
     );
+    if (error) throw new Error(`Seed failed for "${p.slug}": ${error.message}`);
   }
 }
