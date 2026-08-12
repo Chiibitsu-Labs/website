@@ -4,7 +4,7 @@
     {
       "source": "/chii",
       "destination": "/angeline",
-      "permanent": true
+      "statusCode": 301
     }
   ]
 }
