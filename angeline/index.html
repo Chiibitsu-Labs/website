@@ -45,9 +45,10 @@
   },
   "address": {
     "@type": "PostalAddress",
-    "addressLocality": "Taguig",
+    "addressLocality": "Makati",
     "addressCountry": "PH"
   },
+  "areaServed": ["Makati", "Nuvali"],
   "email": "mailto:labs@chiibitsu.com",
   "sameAs": ["https://www.linkedin.com/in/angelinev"]
 }
@@ -76,7 +77,7 @@
     color-scheme:only light;
     margin:0; background:var(--page); color:var(--ink);
     font-family:"DM Sans",-apple-system,BlinkMacSystemFont,sans-serif;
-    font-weight:300; font-size:16px; line-height:1.55;
+    font-weight:300; font-size:18px; line-height:1.55;
     -webkit-font-smoothing:antialiased;
   }
   @media (prefers-reduced-motion:reduce){
@@ -98,10 +99,10 @@
     height:56px;
   }
   .mark{
-    font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+    font-size:12px;letter-spacing:.22em;text-transform:uppercase;
     color:var(--purple);font-weight:500;
   }
-  .navlinks{display:flex;gap:22px;font-size:13px;}
+  .navlinks{display:flex;gap:22px;font-size:15px;}
   .navlinks a{color:var(--ink-soft);text-decoration:none;}
   .navlinks a:hover{color:var(--purple);}
   @media(max-width:640px){.navlinks{display:none;}}
@@ -121,13 +122,13 @@
   }
   .herometa{
     display:flex;flex-wrap:wrap;gap:8px 20px;
-    font-size:13px;color:var(--ink-faint);
+    font-size:15px;color:var(--ink-faint);
   }
 
   /* ---- section furniture ---- */
   section{padding:52px 0;}
   .label{
-    font-size:9px;font-weight:500;letter-spacing:.2em;
+    font-size:12px;font-weight:500;letter-spacing:.2em;
     text-transform:uppercase;color:var(--purple);
     margin:0 0 24px;display:flex;align-items:center;gap:12px;
   }
@@ -147,8 +148,8 @@
     font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
     font-size:24px;color:var(--purple-dk);margin:0 0 10px;line-height:1;
   }
-  .now-what{font-size:15px;font-weight:500;margin:0 0 6px;line-height:1.3;}
-  .now-who{font-size:13.5px;color:var(--ink-soft);margin:0;line-height:1.45;}
+  .now-what{font-size:17px;font-weight:500;margin:0 0 6px;line-height:1.3;}
+  .now-who{font-size:15.5px;color:var(--ink-soft);margin:0;line-height:1.45;}
 
   /* ---- stats ---- */
   .proof{display:grid;grid-template-columns:repeat(5,1fr);gap:22px;}
@@ -158,7 +159,7 @@
     font-size:clamp(26px,3.4vw,36px);font-weight:600;
     line-height:1;display:block;
   }
-  .stat-l{font-size:12px;color:var(--ink-soft);line-height:1.4;
+  .stat-l{font-size:14px;color:var(--ink-soft);line-height:1.4;
           display:block;margin-top:8px;}
 
   /* ---- fix ---- */
@@ -167,7 +168,7 @@
     font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
     font-size:23px;color:var(--purple-dk);line-height:1.25;margin:0 0 10px;
   }
-  .fix-a{font-size:14.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
+  .fix-a{font-size:16.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
 
   /* ---- offers ---- */
   .offers{display:grid;gap:1px;background:var(--rule);
@@ -181,23 +182,23 @@
     font-family:"Cormorant Garamond",Georgia,serif;
     font-size:26px;line-height:1.1;margin:0 0 6px;
   }
-  .offer-for{font-size:12px;color:var(--purple);letter-spacing:.02em;margin:0;}
-  .offer-body{font-size:14.5px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5;}
+  .offer-for{font-size:14px;color:var(--purple);letter-spacing:.02em;margin:0;}
+  .offer-body{font-size:16.5px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5;}
   .offer-leave{
-    font-size:13px;color:var(--ink);margin:0;
+    font-size:15px;color:var(--ink);margin:0;
     padding-left:14px;border-left:2px solid var(--purple-mid);
   }
   .offer-leave strong{font-weight:500;}
 
-  .offer-cta{margin:12px 0 0;font-size:13px;}
+  .offer-cta{margin:12px 0 0;font-size:15px;}
   .offer-cta a{text-decoration:none;border-bottom:1px solid var(--rule);padding-bottom:2px;}
   .offer-cta a:hover{border-bottom-color:var(--purple);}
   .section-lede{
-    font-size:15px;color:var(--ink-soft);max-width:60ch;
+    font-size:17px;color:var(--ink-soft);max-width:60ch;
     margin:-8px 0 24px;line-height:1.55;
   }
   .section-note{
-    font-size:14px;color:var(--ink-soft);margin:22px 0 0;
+    font-size:16px;color:var(--ink-soft);margin:22px 0 0;
   }
 
   /* ---- spine ---- */
@@ -213,16 +214,16 @@
     background:var(--page);border:1.5px solid var(--purple-mid);
   }
   .stop.live::before{background:var(--purple);border-color:var(--purple);}
-  .yr{font-size:12px;color:var(--ink-faint);padding-top:3px;white-space:nowrap;}
-  .stop-role{font-size:15px;font-weight:500;margin:0;line-height:1.3;}
+  .yr{font-size:14px;color:var(--ink-faint);padding-top:3px;white-space:nowrap;}
+  .stop-role{font-size:17px;font-weight:500;margin:0;line-height:1.3;}
   .stop-org{color:var(--purple);font-weight:400;}
-  .stop-note{font-size:13.5px;color:var(--ink-soft);margin:5px 0 0;line-height:1.5;}
+  .stop-note{font-size:15.5px;color:var(--ink-soft);margin:5px 0 0;line-height:1.5;}
 
   /* ---- chips ---- */
   .chipgroup{margin-top:30px;}
   .chips{display:flex;flex-wrap:wrap;gap:7px;}
   .chip{
-    font-size:12.5px;color:var(--ink-soft);background:var(--page-alt);
+    font-size:14.5px;color:var(--ink-soft);background:var(--page-alt);
     border:1px solid var(--rule);padding:5px 12px;line-height:1.3;
   }
   .chip.key{background:var(--purple-dk);border-color:var(--purple-dk);color:#fff;}
@@ -238,10 +239,10 @@
     max-width:20ch;
   }
   .cta h2 em{font-style:italic;color:var(--purple-mid);}
-  .cta p{color:#D6CCE8;max-width:46ch;margin:0 0 28px;font-size:16px;}
+  .cta p{color:#D6CCE8;max-width:46ch;margin:0 0 28px;font-size:18px;}
   .btnrow{display:flex;flex-wrap:wrap;gap:12px;}
   .btn{
-    display:inline-block;text-decoration:none;font-size:14px;
+    display:inline-block;text-decoration:none;font-size:16px;
     padding:13px 26px;border:1px solid #fff;color:#fff;
   }
   .btn.solid{background:#fff;color:var(--purple-dk);font-weight:500;}
@@ -250,13 +251,13 @@
 
   /* ---- foot ---- */
   .foot{
-    padding:26px 0 34px;font-size:12.5px;color:var(--ink-faint);
+    padding:26px 0 34px;font-size:14.5px;color:var(--ink-faint);
     display:flex;justify-content:space-between;gap:20px;
     align-items:baseline;flex-wrap:wrap;
   }
   .foot em{
     font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
-    font-size:16px;color:var(--purple);
+    font-size:18px;color:var(--purple);
   }
 
   /* ---- responsive ---- */
@@ -296,7 +297,7 @@
     <p class="lede">Fractional AI and operations lead for founder-led businesses. I build the workflows and decision systems that stop everything running through you.</p>
     <div class="herometa">
       <span>Founder, Chiibitsu Labs</span>
-      <span>Taguig, Philippines · global hours</span>
+      <span>Makati &amp; Nuvali, Philippines · global hours</span>
       <span>12+ years operating</span>
       <span>Building <a href="#lighthouse">Lighthouse</a></span>
     </div>
