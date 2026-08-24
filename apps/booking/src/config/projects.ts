@@ -47,8 +47,8 @@ export interface Project {
   isPaid?: boolean;
   // Display order on the homepage (lower = first)
   sortOrder?: number;
-  // Where the session takes place
-  locationType?: 'online' | 'in_person';
+  // Where the session takes place. 'either' lets the booker choose at checkout.
+  locationType?: 'online' | 'in_person' | 'either';
   // Template for the Google Calendar invite title. Supports {project}, {company},
   // {department}, {booker} tokens. Falls back to "[{project}] {company} - {department}"
   // when not set.

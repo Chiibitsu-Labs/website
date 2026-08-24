@@ -58,7 +58,10 @@ function rowToProject(row: ProjectRow): Project {
     calendarId: row.calendar_id ?? undefined,
     isPaid: row.is_paid ?? false,
     sortOrder: row.sort_order ?? 0,
-    locationType: row.location_type === 'in_person' ? 'in_person' : 'online',
+    locationType:
+      row.location_type === 'in_person' || row.location_type === 'either'
+        ? row.location_type
+        : 'online',
     calendarEventTitleTemplate: row.calendar_event_title_template ?? undefined,
   };
 }
@@ -139,7 +142,7 @@ export interface ProjectInput {
   calendarId?: string;
   isPaid?: boolean;
   sortOrder?: number;
-  locationType?: 'online' | 'in_person';
+  locationType?: 'online' | 'in_person' | 'either';
   calendarEventTitleTemplate?: string;
 }
 

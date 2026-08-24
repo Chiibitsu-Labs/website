@@ -53,7 +53,7 @@ interface FormState {
   calendarId: string;
   slug: string;
   isPaid: boolean;
-  locationType: 'online' | 'in_person';
+  locationType: 'online' | 'in_person' | 'either';
   calendarEventTitleTemplate: string;
 }
 
@@ -421,19 +421,19 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
                   {form.isPaid ? 'Paid session' : 'Free session'}
                 </button>
               </Field>
-              <Field label="Location">
-                <button
-                  type="button"
-                  onClick={() => setField('locationType', form.locationType === 'online' ? 'in_person' : 'online')}
-                  className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition ${
-                    form.locationType === 'in_person'
-                      ? 'bg-blue-600/20 text-blue-300 border border-blue-600/40'
-                      : 'bg-violet-600/20 text-violet-300 border border-violet-600/40'
-                  }`}
+              <Field
+                label="Location"
+                hint="Choose “Let the booker pick” to offer both — they choose when booking"
+              >
+                <select
+                  value={form.locationType}
+                  onChange={(e) => setField('locationType', e.target.value as FormState['locationType'])}
+                  className="admin-input"
                 >
-                  <span>{form.locationType === 'in_person' ? '📍' : '💻'}</span>
-                  {form.locationType === 'in_person' ? 'Face to face' : 'Online'}
-                </button>
+                  <option value="online">💻 Online</option>
+                  <option value="in_person">📍 Face to face</option>
+                  <option value="either">🔀 Let the booker pick</option>
+                </select>
               </Field>
               <Field
                 label="Calendar invite title"

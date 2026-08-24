@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
-import { formatDuration } from './utils';
+import { formatDuration, prettifyFieldKey } from './utils';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -126,13 +126,7 @@ export interface BookingDetails {
   customFields: Record<string, string>;
   calendarEventTitleTemplate?: string;
   projectDescription?: string;
-  locationType?: 'online' | 'in_person';
-}
-
-// Turn a custom-field id into a readable label, e.g. "company_name" → "Company name".
-function prettifyKey(key: string): string {
-  const spaced = key.replace(/[_-]+/g, ' ').trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  locationType?: 'online' | 'in_person' | 'either';
 }
 
 // Warm, client-facing invite body. The booker is an attendee, so this is what
@@ -144,10 +138,16 @@ function buildEventDescription(booking: BookingDetails): string {
     differenceInMinutes(new Date(booking.endISO), new Date(booking.startISO)),
   );
 
-  const locationLine =
-    booking.locationType === 'in_person'
-      ? '📍 In person — we\'ll confirm the exact venue with you'
-      : '💻 Online — we\'ll send the joining link before we start';
+  // When the project offers both, the booker's own choice wins over the
+  // project-level default.
+  const chosenLocation = booking.customFields.location_choice;
+  const isInPerson = chosenLocation
+    ? chosenLocation.toLowerCase().startsWith('face')
+    : booking.locationType === 'in_person';
+
+  const locationLine = isInPerson
+    ? '📍 In person — we\'ll confirm the exact venue with you'
+    : '💻 Online — we\'ll send the joining link before we start';
 
   const detailRows = [
     `Name: ${booking.bookerName}`,
@@ -155,8 +155,9 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
     booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
     ...Object.entries(booking.customFields)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${prettifyKey(k)}: ${v}`),
+      // location_choice is already stated in the location line above.
+      .filter(([k, v]) => v && k !== 'location_choice')
+      .map(([k, v]) => `${prettifyFieldKey(k)}: ${v}`),
   ].filter(Boolean);
 
   const lines = [
