@@ -7,9 +7,11 @@ import {
   HOST_TIMEZONE,
   formatLongDateInZone,
   formatTimeInZone,
+  friendlyZoneName,
   zoneDescription,
   zonesDiffer,
 } from '@/lib/timezone';
+import { LOCATION_CHOICES } from '@/lib/location';
 
 interface AdminProject {
   slug: string;
@@ -133,14 +135,21 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   const previewEnd = previewStart ? addMinutes(previewStart, minutes) : null;
   // Label and compare against the session instant, not "now", so a booking
   // across a DST changeover is not tagged with the wrong abbreviation.
-  const showClientZone = (() => {
-    if (!form.bookerTimezone) return false;
+  // The field is free text, so an unrecognised id must be caught here rather
+  // than silently dropping the "Your local time" block from the client's email.
+  const clientZoneValid = (() => {
+    if (!form.bookerTimezone) return true;
     try {
-      return zonesDiffer(form.bookerTimezone, HOST_TIMEZONE, previewStart ?? undefined);
+      new Intl.DateTimeFormat('en-US', { timeZone: form.bookerTimezone }).format(new Date());
+      return true;
     } catch {
-      return false; // unrecognised IANA id typed into the free-text field
+      return false;
     }
   })();
+  const showClientZone =
+    !!form.bookerTimezone &&
+    clientZoneValid &&
+    zonesDiffer(form.bookerTimezone, HOST_TIMEZONE, previewStart ?? undefined);
 
   async function handleSave(allowConflict = false) {
     if (!form.slug || !form.name || !form.email || !form.date || !form.time) {
@@ -149,6 +158,12 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
     }
     if (selected?.locationType === 'either' && !form.locationChoice) {
       setError('This session can run online or face to face — pick one.');
+      return;
+    }
+    if (!clientZoneValid) {
+      setError(
+        `"${form.bookerTimezone}" is not a timezone name. Use an IANA id like America/Vancouver.`,
+      );
       return;
     }
     setSaving(true);
@@ -230,10 +245,10 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <Field label="Date" required hint="your time">
+              <Field label="Date" required hint={`${friendlyZoneName(HOST_TIMEZONE)} time`}>
                 <input type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} className="admin-input" />
               </Field>
-              <Field label="Start" required hint="your time">
+              <Field label="Start" required hint={`${friendlyZoneName(HOST_TIMEZONE)} time`}>
                 <input type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} className="admin-input" />
               </Field>
               <Field label="Minutes" hint="length">
@@ -270,8 +285,9 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
                   className="admin-input"
                 >
                   <option value="">— pick one —</option>
-                  <option value="Online">💻 Online</option>
-                  <option value="Face to face">📍 Face to face</option>
+                  {LOCATION_CHOICES.map((c) => (
+                    <option key={c} value={c}>{c === 'Online' ? '💻' : '📍'} {c}</option>
+                  ))}
                 </select>
               </Field>
             )}
@@ -291,7 +307,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
               <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 text-sm">
                 <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Confirm the time</p>
                 <p className="text-gray-200">
-                  <span className="text-gray-400">You:</span>{' '}
+                  <span className="text-gray-400">You ({friendlyZoneName(HOST_TIMEZONE)}):</span>{' '}
                   {formatLongDateInZone(previewStart.toISOString(), HOST_TIMEZONE)},{' '}
                   {formatTimeInZone(previewStart.toISOString(), HOST_TIMEZONE)} –{' '}
                   {formatTimeInZone(previewEnd.toISOString(), HOST_TIMEZONE)}

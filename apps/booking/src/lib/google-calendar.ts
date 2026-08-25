@@ -3,6 +3,7 @@ import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
 import { formatDuration, prettifyFieldKey } from './utils';
+import { isInPersonChoice } from './location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -167,7 +168,7 @@ export function describeLocation(
     return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
   }
   const isInPerson = chosen
-    ? chosen.toLowerCase().startsWith('face')
+    ? isInPersonChoice(chosen)
     : booking.locationType === 'in_person';
   return isInPerson
     ? '📍 In person — we\'ll confirm the exact venue with you'

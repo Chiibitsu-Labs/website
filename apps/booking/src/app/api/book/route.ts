@@ -9,6 +9,7 @@ import {
 import { createPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { sendApprovalRequest, hasTelegram } from '@/lib/telegram';
+import { LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
 import { format, addDays, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -58,6 +59,13 @@ export async function POST(req: NextRequest) {
     // guarantee — and the admin route already enforces it, so accepting it here
     // would let the same input land as "format to be confirmed" via one path
     // and be rejected by the other.
+    if (customFields.location_choice && !isLocationChoice(customFields.location_choice)) {
+      return NextResponse.json(
+        { error: `Location must be one of: ${LOCATION_CHOICES.join(', ')}.` },
+        { status: 400 },
+      );
+    }
+
     if (project.locationType === 'either' && !customFields.location_choice) {
       return NextResponse.json(
         { error: 'Please choose whether you would like to meet online or face to face.' },

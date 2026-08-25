@@ -14,15 +14,18 @@ import {
   zoneDescription,
   zonesDiffer,
 } from '@/lib/timezone';
+import { LOCATION_CHOICES } from '@/lib/location';
 
 type Step = 'calendar' | 'timeslot' | 'form' | 'submitting' | 'done' | 'pending';
 
 // Stored in customFields under a reserved key so it rides the existing booking
 // plumbing (approval token, calendar invite, emails, Telegram) with no new wiring.
-const LOCATION_CHOICES = [
-  { value: 'Online', emoji: '💻' },
-  { value: 'Face to face', emoji: '📍' },
-] as const;
+// Values come from the shared constant: the server decides "in person" by exact
+// match, so a label edited only here would silently mis-describe every booking.
+const LOCATION_OPTIONS = LOCATION_CHOICES.map((value) => ({
+  value,
+  emoji: value === 'Online' ? '💻' : '📍',
+}));
 
 interface FormData {
   name: string;
@@ -557,7 +560,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           {project.locationType === 'either' && (
             <Field label="How would you like to meet?" error={formErrors.location_choice} required>
               <div className="grid grid-cols-2 gap-2">
-                {LOCATION_CHOICES.map((opt) => (
+                {LOCATION_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"

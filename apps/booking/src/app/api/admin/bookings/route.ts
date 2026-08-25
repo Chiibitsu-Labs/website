@@ -7,6 +7,7 @@ import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 import { getAllProjectsAdmin } from '@/lib/db';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { errorMessage } from '@/lib/utils';
+import { LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -70,6 +71,13 @@ export async function POST(req: NextRequest) {
     const project = (await getAllProjectsAdmin()).find((p) => p.slug === slug);
     if (!project) {
       return NextResponse.json({ error: `No project found for "${slug}".` }, { status: 404 });
+    }
+
+    if (locationChoice && !isLocationChoice(locationChoice)) {
+      return NextResponse.json(
+        { error: `Location must be one of: ${LOCATION_CHOICES.join(', ')}.` },
+        { status: 400 },
+      );
     }
 
     if (project.locationType === 'either' && !locationChoice) {

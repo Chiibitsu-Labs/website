@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
   const email = fieldValue(fields, 'Email Address');
   const phone = fieldValue(fields, 'Contact Number');
   const paymentMethod = fieldValue(fields, 'Payment Method Used');
-  const paymentRef = fieldValue(fields, 'Payment Reference Number');
+  // Inside a code entity, so escapes would render literally; strip backticks
+  // instead, which would otherwise unbalance the entity.
+  const paymentRef = rawFieldValue(fields, 'Payment Reference Number').replace(/`/g, '');
   const attendees = fieldValue(fields, 'Number of Attendees');
   const exclusiveCode = fieldValue(fields, 'Exclusive Code');
   const notes = fieldValue(fields, 'Anything else you want us to know?');
