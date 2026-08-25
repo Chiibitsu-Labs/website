@@ -143,6 +143,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [form, setForm] = useState<FormData>({
     name: prefill?.name ?? '',
@@ -226,17 +227,29 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   const fetchSlots = useCallback(async (date: Date) => {
     setLoadingSlots(true);
     setSlots([]);
+    setSlotsError('');
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const res = await fetch(`/api/availability?slug=${project.slug}&date=${dateStr}`);
+      const params = new URLSearchParams({ slug: project.slug, date: dateStr });
+      // Lets the endpoint serve a paused project to a client who is already
+      // booked on it, the same way the page and /api/book do.
+      if (rescheduleToken) params.set('reschedule', rescheduleToken);
+      const res = await fetch(`/api/availability?${params}`);
+      // fetch resolves on 4xx/5xx. Without this the day would just render "No
+      // slots available", which reads as a full calendar rather than a failure
+      // and hides the breakage from the booker and from us.
+      if (!res.ok) {
+        setSlotsError("We couldn't load times for that day. Please try again.");
+        return;
+      }
       const data = await res.json();
       setSlots(data.slots ?? []);
     } catch {
-      setSlots([]);
+      setSlotsError("We couldn't load times for that day. Please try again.");
     } finally {
       setLoadingSlots(false);
     }
-  }, [project.slug]);
+  }, [project.slug, rescheduleToken]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -455,6 +468,16 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         {loadingSlots ? (
           <div className="flex items-center justify-center py-8">
             <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+          </div>
+        ) : slotsError ? (
+          <div className="text-center py-8">
+            <p className="text-red-600 text-sm">{slotsError}</p>
+            <button
+              onClick={() => selectedDate && fetchSlots(selectedDate)}
+              className="mt-3 text-sm text-gray-600 underline"
+            >
+              Try again
+            </button>
           </div>
         ) : slots.length === 0 ? (
           <div className="text-center py-8">
