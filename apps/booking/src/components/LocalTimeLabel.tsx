@@ -32,8 +32,12 @@ export function LocalTimeLabel({ iso }: { iso: string }) {
 
   return (
     <>
-      {formatDateInZone(iso, zone)} at {formatTimeInZone(iso, zone)}{' '}
-      <span className="text-blue-500">({zoneDescription(zone, at)})</span>
+      {formatDateInZone(iso, zone)} at {formatTimeInZone(iso, zone)}
+      {' · '}
+      {/* zoneDescription already ends in "(PDT)" — wrapping it in parens of our
+          own rendered "(Vancouver time (PDT))". Every other call site takes it
+          bare; this one now does too. */}
+      <span className="text-blue-500">{zoneDescription(zone, at)}</span>
     </>
   );
 }
