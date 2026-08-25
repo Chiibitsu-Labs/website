@@ -51,6 +51,7 @@ interface Props {
 export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel }: Props) {
   const [projects, setProjects] = useState<AdminProject[]>([]);
   const [saving, setSaving] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [error, setError] = useState('');
   // Set when the server reports an overlapping event; lets the admin proceed
   // deliberately rather than being blocked or silently double-booking.
@@ -84,6 +85,10 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
       }
       const list: AdminProject[] = data.projects ?? [];
       setProjects(list);
+      setProjectsLoaded(true);
+      if (list.length === 0) {
+        setError('No sessions to book against yet — add one under Projects first.');
+      }
       if (list.length > 0) {
         setForm((f) => ({
           ...f,
@@ -226,7 +231,12 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
                 onChange={(e) => setField('slug', e.target.value)}
                 className="admin-input"
               >
-                {projects.length === 0 && <option value="">Loading…</option>}
+                {/* An empty list is a 200, so without the loaded flag this sat
+                    on "Loading…" for ever and "Add booking" then failed with a
+                    required-fields error that named the wrong problem. */}
+                {projects.length === 0 && (
+                  <option value="">{projectsLoaded ? 'No sessions found' : 'Loading…'}</option>
+                )}
                 {projects.map((p) => (
                   <option key={p.slug} value={p.slug}>{p.name}</option>
                 ))}
