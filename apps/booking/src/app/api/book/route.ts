@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectBySlug } from '@/lib/db';
+import { getProjectBySlug, getProjectBySlugIncludingPaused } from '@/lib/db';
 import { createBookingEvent, getAvailableSlots, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendBookingConfirmationToBooker,
@@ -50,7 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const project = await getProjectBySlug(slug);
+    // A valid reschedule token is proof this person was already booked on the
+    // project, so a pause must not strand them mid-reschedule.
+    const project = reschedulePayload
+      ? await getProjectBySlugIncludingPaused(slug)
+      : await getProjectBySlug(slug);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
@@ -74,6 +78,29 @@ export async function POST(req: NextRequest) {
         { error: 'Please choose whether you would like to meet online or face to face.' },
         { status: 400 },
       );
+    }
+
+    /**
+     * `location_choice` decides client-facing copy ("we'll send the joining
+     * link" vs "we'll confirm the venue"), and describeLocation honours it on
+     * ANY project so the admin can book one online client against a
+     * face-to-face project. That makes provenance matter: the value is only
+     * trustworthy when WE recorded it.
+     *
+     * Only two sources qualify. On an 'either' project the booker was actually
+     * asked, so their submission is the answer. Otherwise the form never
+     * offered the choice, so anything posted under that key is spoofed or a
+     * stale prefill — but the reschedule token is HMAC-signed by us, so a
+     * choice carried inside it is our own earlier decision and must survive the
+     * reschedule rather than silently reverting to the project default.
+     */
+    if (locationIsReserved && project.locationType !== 'either') {
+      const carriedOver = reschedulePayload?.customFields?.location_choice;
+      if (isLocationChoice(carriedOver)) {
+        customFields.location_choice = carriedOver;
+      } else {
+        delete customFields.location_choice;
+      }
     }
 
     // Verify slot exists and isn't blocked by an existing Google Calendar event

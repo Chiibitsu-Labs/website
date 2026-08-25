@@ -1,16 +1,14 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/config/projects';
-import { getProjectBySlug } from '@/lib/db';
+import { getProjectBySlug, getProjectBySlugIncludingPaused } from '@/lib/db';
 import { BookingFlow } from '@/components/BookingFlow';
 import { TimezoneChip } from '@/components/TimezoneChip';
+import { LocalTimeLabel } from '@/components/LocalTimeLabel';
 import { formatDuration } from '@/lib/utils';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
-import { format, parseISO, addDays, isBefore } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { parseISO, addDays, isBefore } from 'date-fns';
 import Link from 'next/link';
-
-const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,14 +27,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BookPage({ params, searchParams }: Props) {
-  const project = await getProjectBySlug(params.slug);
-  if (!project) notFound();
-
   // Handle reschedule mode
   const rescheduleParam = typeof searchParams.reschedule === 'string' ? searchParams.reschedule : undefined;
+  const payload = rescheduleParam ? verifyRescheduleToken(rescheduleParam) : null;
+
+  // A verified token proves this person is already booked on the project, so
+  // pausing it must not 404 their reschedule link — or, for a seed slug, hand
+  // them the hard-coded seed config and rebook them on the wrong calendar.
+  const project = payload
+    ? await getProjectBySlugIncludingPaused(params.slug)
+    : await getProjectBySlug(params.slug);
+  if (!project) notFound();
+
   let rescheduleInfo: {
     token: string;
-    originalLabel: string;
+    originalStartISO: string;
     prefill: { name: string; email: string; phone: string; company: string; customFields: Record<string, string> };
   } | null = null;
   let rescheduleWindowClosed = false;
@@ -46,16 +51,18 @@ export default async function BookPage({ params, searchParams }: Props) {
     project.customFields.some((f) => f.id === 'location_choice');
 
   if (rescheduleParam) {
-    const payload = verifyRescheduleToken(rescheduleParam);
     if (payload) {
       const canReschedule = isBefore(addDays(new Date(), 7), parseISO(payload.originalStartISO));
       if (!canReschedule) {
         rescheduleWindowClosed = true;
       } else {
-        const zonedOriginal = toZonedTime(parseISO(payload.originalStartISO), TIMEZONE);
         rescheduleInfo = {
           token: rescheduleParam,
-          originalLabel: format(zonedOriginal, "EEE, MMM d 'at' h:mm a"),
+          // Pass the instant, not a pre-formatted host-zone string: every other
+          // time on this page now renders in the viewer's own zone, and an
+          // unlabelled Manila time here would tell a Toronto booker their
+          // session is at 9:00 AM when for them it is 9:00 PM the day before.
+          originalStartISO: payload.originalStartISO,
           prefill: {
             name: payload.bookerName,
             email: payload.bookerEmail,
@@ -165,7 +172,9 @@ export default async function BookPage({ params, searchParams }: Props) {
         {rescheduleInfo && (
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 text-sm">
             <p className="font-semibold text-blue-900">Rescheduling your booking</p>
-            <p className="text-blue-700 mt-0.5">Currently booked: {rescheduleInfo.originalLabel}</p>
+            <p className="text-blue-700 mt-0.5">
+              Currently booked: <LocalTimeLabel iso={rescheduleInfo.originalStartISO} />
+            </p>
             <p className="text-blue-600 text-xs mt-1">Pick a new date and time below. Your original slot will be released once your new booking is confirmed.</p>
           </div>
         )}

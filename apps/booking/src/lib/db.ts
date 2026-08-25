@@ -108,6 +108,38 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
   return rowToProject(data);
 }
 
+/**
+ * Same lookup, but ignoring `is_active` — for holders of a valid, signed
+ * reschedule token only.
+ *
+ * A project can be paused after a client is booked on it (the admin can book a
+ * paused project by hand deliberately). Their reschedule link would then hit
+ * getProjectBySlug, find no active row, and 404 — or, for a seed slug, silently
+ * fall through to hard-coded SEED_PROJECTS and reschedule them against the
+ * wrong calendar, duration and title. Pausing a project stops NEW bookings; it
+ * must not strand the people already booked.
+ */
+export async function getProjectBySlugIncludingPaused(slug: string): Promise<Project | null> {
+  noStore();
+  const client = getClient();
+  if (!client) {
+    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  }
+
+  const { data, error } = await client
+    .from('booking_projects')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error('DB getProjectBySlugIncludingPaused error:', error);
+    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  }
+  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
+  return rowToProject(data);
+}
+
 export async function getAllProjectsAdmin(): Promise<(Project & { isActive: boolean; id: string })[]> {
   noStore();
   const client = getClient();
