@@ -3,7 +3,8 @@ import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
 import { formatDuration, prettifyFieldKey } from './utils';
-import { isInPersonChoice } from './location';
+import { friendlyZoneName } from './timezone';
+import { isInPersonChoice, isLocationChoice } from './location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -176,13 +177,15 @@ export function stripAdminOnlyFields(
  * Shared so the invite and the emails cannot drift apart.
  */
 export function describeLocation(
-  booking: Pick<BookingDetails, 'customFields' | 'locationType'>,
+  booking: Pick<BookingDetails, 'customFields' | 'locationType' | 'projectFieldIds'>,
 ): string {
-  // Only consult the booker's choice while the project still offers both. A
-  // project switched to online-only must not keep emitting "in person" for an
-  // old booking whose stored choice says so.
-  const chosen =
-    booking.locationType === 'either' ? booking.customFields.location_choice : undefined;
+  // A location recorded ON THIS BOOKING wins over the project default: an
+  // admin booking one online client against a face-to-face project is exactly
+  // the case this exists for. Ignored only when the id belongs to a project's
+  // own custom field, where the value is the booker's answer, not a location.
+  const isOurs = !(booking.projectFieldIds ?? []).includes('location_choice');
+  const raw = isOurs ? booking.customFields.location_choice : undefined;
+  const chosen = isLocationChoice(raw) ? raw : undefined;
   if (!chosen && booking.locationType === 'either') {
     return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
   }
@@ -220,7 +223,7 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.projectDescription ? `\n${booking.projectDescription}` : null,
     ``,
     `🗓  ${format(zonedStart, 'EEEE, MMMM d, yyyy')}`,
-    `🕐  ${format(zonedStart, 'h:mm a')} – ${format(zonedEnd, 'h:mm a')} (Philippine time · UTC+8)`,
+    `🕐  ${format(zonedStart, 'h:mm a')} – ${format(zonedEnd, 'h:mm a')} (${friendlyZoneName(TIMEZONE)} time)`,
     `⏱  ${durationLabel}`,
     locationLine,
     ``,

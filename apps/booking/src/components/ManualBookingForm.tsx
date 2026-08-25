@@ -277,14 +277,22 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
               </datalist>
             </Field>
 
-            {selected?.locationType === 'either' && (
-              <Field label="Location" required hint="this project lets the client choose">
+            {selected && (
+              <Field
+                label="Location"
+                required={selected.locationType === 'either'}
+                hint={
+                  selected.locationType === 'either'
+                    ? 'this project lets the client choose'
+                    : `project default is ${selected.locationType === 'in_person' ? 'face to face' : 'online'} — override it for this booking if needed`
+                }
+              >
                 <select
                   value={form.locationChoice}
                   onChange={(e) => setField('locationChoice', e.target.value)}
                   className="admin-input"
                 >
-                  <option value="">— pick one —</option>
+                  <option value="">— use the project default —</option>
                   {LOCATION_CHOICES.map((c) => (
                     <option key={c} value={c}>{c === 'Online' ? '💻' : '📍'} {c}</option>
                   ))}

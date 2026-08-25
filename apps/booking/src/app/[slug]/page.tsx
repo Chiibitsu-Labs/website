@@ -57,7 +57,16 @@ export default async function BookPage({ params, searchParams }: Props) {
             email: payload.bookerEmail,
             phone: payload.bookerPhone,
             company: payload.bookerCompany,
-            customFields: payload.customFields,
+            // Drop a stale location once the project stops offering both, or
+            // the picker is hidden and the old value silently carries over.
+            customFields:
+              project.locationType === 'either'
+                ? payload.customFields
+                : Object.fromEntries(
+                    Object.entries(payload.customFields).filter(
+                      ([k]) => k !== 'location_choice',
+                    ),
+                  ),
           },
         };
       }

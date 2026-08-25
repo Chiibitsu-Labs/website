@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
       date,           // "2026-08-26" — wall-clock date in the host timezone
       time,           // "12:00" — 24h wall-clock start in the host timezone
       durationMinutes,
-      locationChoice, // "Online" | "Face to face" — optional override
+      locationChoice, // "Online" | "Face to face" — per-booking override,
+                      // valid for ANY project, not just 'either' ones
       bookerTimezone, // IANA id, so the confirmation email shows their local time
       notes = '',     // internal: never rendered to the client
       sendEmail = true,
