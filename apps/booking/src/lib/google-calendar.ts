@@ -137,6 +137,22 @@ export interface BookingDetails {
  */
 export const CLIENT_HIDDEN_FIELDS = new Set(['location_choice', 'booker_timezone', 'admin_note']);
 
+/**
+ * Stricter than hiding: these must never reach the client by ANY route.
+ * The reschedule token is base64url(JSON) + HMAC — signed, not encrypted — and
+ * its URL is emailed to the booker, so anything left in it is readable by them.
+ */
+export const ADMIN_ONLY_FIELDS = new Set(['admin_note']);
+
+/** Custom fields safe to round-trip through a client-held token. */
+export function stripAdminOnlyFields(
+  fields: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([k]) => !ADMIN_ONLY_FIELDS.has(k)),
+  );
+}
+
 // Warm, client-facing invite body. The booker is an attendee, so this is what
 // they read inside their calendar — keep it professional and reassuring.
 function buildEventDescription(booking: BookingDetails): string {
@@ -292,8 +308,11 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
   const calendar = getCalendarClient();
   const defaultCalId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
-  const { getProjects } = await import('@/lib/db');
-  const projectList = await getProjects();
+  const { getProjects, getAllProjectsAdmin } = await import('@/lib/db');
+  // The manual path can book a PAUSED project, so resolve calendars from the
+  // admin list; getProjects filters to is_active and would hide those bookings.
+  const adminList = await getAllProjectsAdmin().catch(() => []);
+  const projectList = adminList.length > 0 ? adminList : await getProjects();
 
   // Bookings are created on the project's own calendar when it has one, so
   // listing only the default calendar would hide them from this list entirely.
@@ -320,7 +339,14 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
     ),
   );
 
-  const events = results.flat();
+  // 'primary' and the account's explicit address are distinct strings but the
+  // same calendar, so the same event can arrive twice.
+  const seenIds = new Set<string>();
+  const events = results.flat().filter((e) => {
+    if (!e.id || seenIds.has(e.id)) return false;
+    seenIds.add(e.id);
+    return true;
+  });
 
   return events
     .filter((e) => e.start?.dateTime)
@@ -353,8 +379,9 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
         customFields,
       };
     })
-    // Merged from several calendars, so each list's own ordering no longer holds.
-    .sort((a, b) => a.startISO.localeCompare(b.startISO));
+    // Merged from several calendars, so each list's own ordering no longer
+    // holds. Compare instants: the strings carry per-calendar UTC offsets.
+    .sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime());
 }
 
 /**

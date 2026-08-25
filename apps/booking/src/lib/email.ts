@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { CLIENT_HIDDEN_FIELDS, type BookingDetails } from './google-calendar';
+import { CLIENT_HIDDEN_FIELDS, stripAdminOnlyFields, type BookingDetails } from './google-calendar';
 import type { Project } from '@/config/projects';
 import { prettifyFieldKey } from './utils';
 import { createRescheduleToken } from './reschedule-token';
@@ -79,7 +79,8 @@ function buildRescheduleUrl(booking: BookingDetails, eventId: string, calendarId
     bookerEmail: booking.bookerEmail,
     bookerPhone: booking.bookerPhone ?? '',
     bookerCompany: booking.bookerCompany ?? '',
-    customFields: booking.customFields,
+    // The booker can decode this token from their own reschedule link.
+    customFields: stripAdminOnlyFields(booking.customFields),
     originalStartISO: booking.startISO,
     originalEndISO: booking.endISO,
     expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,

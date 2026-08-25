@@ -3,7 +3,7 @@ import { addMinutes } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import { createBookingEvent, findConflicts, getUpcomingBookings } from '@/lib/google-calendar';
 import { sendBookingConfirmationToBooker } from '@/lib/email';
-import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 import { getAllProjectsAdmin } from '@/lib/db';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { errorMessage } from '@/lib/utils';
@@ -151,8 +151,8 @@ export async function POST(req: NextRequest) {
 
     if (hasTelegram()) {
       await sendSimpleMessage(
-        `✍️ *Booking added manually*\n${project.name} · ${name}\n${date} ${time} (${minutes} min)` +
-          (notes ? `\n📝 ${notes}` : '') +
+        `✍️ *Booking added manually*\n${escapeMarkdown(project.name)} · ${escapeMarkdown(String(name))}\n${date} ${time} (${minutes} min)` +
+          (notes ? `\n📝 ${escapeMarkdown(String(notes))}` : '') +
           (sendEmail ? '' : '\n(client not notified)'),
       ).catch(() => {});
     }

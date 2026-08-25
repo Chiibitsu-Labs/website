@@ -2,16 +2,38 @@ export function hasTelegram(): boolean {
   return !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
+/**
+ * Escape user-supplied text before interpolating it into a Markdown payload.
+ * An unescaped `_` or `*` in a client name or note makes Telegram reject the
+ * whole message with a 400 — and since fetch resolves on 4xx, the failure is
+ * swallowed and the notification is simply lost.
+ */
+export function escapeMarkdown(text: string): string {
+  return text.replace(/([_*[\]`])/g, '\\$1');
+}
+
 export async function sendSimpleMessage(text: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return;
 
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
-  }).catch((e) => console.error('Telegram sendSimpleMessage error:', e));
+  }).catch((e) => {
+    console.error('Telegram sendSimpleMessage error:', e);
+    return null;
+  });
+
+  // fetch only rejects on network failure, so a rejected payload is otherwise silent.
+  if (res && !res.ok) {
+    console.error(
+      'Telegram sendSimpleMessage rejected:',
+      res.status,
+      await res.text().catch(() => ''),
+    );
+  }
 }
 
 export async function sendApprovalRequest({

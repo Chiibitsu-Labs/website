@@ -406,6 +406,11 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Back'}
+          {/* The rows below may carry the viewer's own (different) date, so say
+              whose calendar this heading is on rather than leaving it bare. */}
+          {selectedDate && slots.some((s) => slotViewerDate(s)) && (
+            <span className="text-gray-400"> in {friendlyZoneName(HOST_TIMEZONE)}</span>
+          )}
         </button>
 
         <div className="flex items-baseline justify-between mb-3 gap-2">
