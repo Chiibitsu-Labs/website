@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cancelBookingEvent } from '@/lib/google-calendar';
-import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 import { errorMessage } from '@/lib/utils';
 import { checkAdminAuth } from '@/lib/admin-auth';
 
@@ -20,9 +20,9 @@ export async function DELETE(req: NextRequest) {
     await cancelBookingEvent(eventId, calendarId);
 
     if (hasTelegram()) {
-      const who = bookerName ? ` · ${bookerName}` : '';
-      const what = projectName ? ` · ${projectName}` : '';
-      const when = dateLabel ? ` · ${dateLabel}` : '';
+      const who = bookerName ? ` · ${escapeMarkdown(String(bookerName))}` : '';
+      const what = projectName ? ` · ${escapeMarkdown(String(projectName))}` : '';
+      const when = dateLabel ? ` · ${escapeMarkdown(String(dateLabel))}` : '';
       await sendSimpleMessage(
         `🚫 *Booking cancelled by admin*${what}${who}${when}`,
       ).catch(() => {});

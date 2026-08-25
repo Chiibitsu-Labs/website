@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectBySlug } from '@/lib/db';
+import { resolveProjectForSlug, rescheduleTokenMatchesProject } from '@/lib/db';
 import { createBookingEvent, getAvailableSlots, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendBookingConfirmationToBooker,
@@ -9,6 +9,12 @@ import {
 import { createPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { sendApprovalRequest, hasTelegram } from '@/lib/telegram';
+import {
+  ADMIN_LOCATION_KEY,
+  BOOKER_LOCATION_KEY,
+  LOCATION_CHOICES,
+  isLocationChoice,
+} from '@/lib/location';
 import { format, addDays, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -36,6 +42,16 @@ export async function POST(req: NextRequest) {
       if (!reschedulePayload) {
         return NextResponse.json({ error: 'Invalid or expired reschedule link.' }, { status: 400 });
       }
+      // The token must name the project being booked. Otherwise a token for one
+      // project would authorise a booking on any other — including a paused one
+      // via the branch below — and, worse, cancel the unrelated event this
+      // token does point at once the new booking is confirmed.
+      if (!rescheduleTokenMatchesProject(reschedulePayload, slug)) {
+        return NextResponse.json(
+          { error: 'That reschedule link is for a different session.' },
+          { status: 400 },
+        );
+      }
       // Enforce 1-week-before rule
       if (!isBefore(addDays(new Date(), 7), new Date(reschedulePayload.originalStartISO))) {
         return NextResponse.json(
@@ -49,9 +65,76 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const project = await getProjectBySlug(slug);
+    // A valid reschedule token for THIS project is proof the person was already
+    // booked on it, so a pause must not strand them mid-reschedule.
+    const project = await resolveProjectForSlug(slug, reschedulePayload);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // BookingFlow requires this choice, but client-side validation is not a
+    // guarantee — and the admin route already enforces it, so accepting it here
+    // would let the same input land as "format to be confirmed" via one path
+    // and be rejected by the other.
+    const projectFieldIds = project.customFields.map((f) => f.id);
+    const locationIsReserved = !projectFieldIds.includes(BOOKER_LOCATION_KEY);
+
+    if (locationIsReserved && customFields.location_choice && !isLocationChoice(customFields.location_choice)) {
+      return NextResponse.json(
+        { error: `Location must be one of: ${LOCATION_CHOICES.join(', ')}.` },
+        { status: 400 },
+      );
+    }
+
+    if (locationIsReserved && project.locationType === 'either' && !customFields.location_choice) {
+      return NextResponse.json(
+        { error: 'Please choose whether you would like to meet online or face to face.' },
+        { status: 400 },
+      );
+    }
+
+    /**
+     * The location decides client-facing copy ("we'll send the joining link"
+     * vs "we'll confirm the venue"), so provenance matters: a value is only
+     * trustworthy when WE recorded it, and what it means depends on who did.
+     *
+     * The admin's override is never client input. Drop whatever was posted
+     * under that key and restore it from the reschedule token, which is
+     * HMAC-signed by us — so an admin's deliberate override (an online client
+     * on a face-to-face project) survives the client rescheduling.
+     *
+     * The booker's own answer is accepted only on an 'either' project, where
+     * the form actually asked. Elsewhere the picker never rendered, so a value
+     * under that key is spoofed or a stale prefill. It is deliberately NOT
+     * carried over from the token: an answer given while the project offered
+     * both modes is stale once it is fixed to one, and reviving it would
+     * promise a face-to-face session on an online-only project.
+     */
+    // Unconditionally ours: only the admin panel writes this key, so a project
+    // field sharing the id is a naming collision, not a booker answer. Guarding
+    // on projectFieldIds here would leave the override stored but unreadable —
+    // never restored, and dropped from the prefill — so the rebooked session
+    // reverted to the project default.
+    const adminOverride = reschedulePayload?.customFields?.[ADMIN_LOCATION_KEY];
+    delete customFields[ADMIN_LOCATION_KEY];
+    // Restored only where the booker was NOT asked. Where they were, the form
+    // just required them to choose, and an override carried forward would
+    // overrule the answer they gave seconds ago — and since each new token
+    // re-carries it, no later reschedule could escape either, leaving the
+    // picker permanently cosmetic for that booking.
+    //
+    // 'either' alone is not the test. The picker only renders when the key is
+    // ALSO ours: an 'either' project that defines its own `location_choice`
+    // field never shows it, and describeLocation ignores that field as a
+    // location — so dropping the override there would leave nothing at all
+    // deciding the format, and a settled in-person arrangement would silently
+    // become "format to be confirmed" on the client's rebooked invite.
+    const bookerWasAsked = locationIsReserved && project.locationType === 'either';
+    if (!bookerWasAsked && isLocationChoice(adminOverride)) {
+      customFields[ADMIN_LOCATION_KEY] = adminOverride;
+    }
+    if (locationIsReserved && project.locationType !== 'either') {
+      delete customFields[BOOKER_LOCATION_KEY];
     }
 
     // Verify slot exists and isn't blocked by an existing Google Calendar event
@@ -84,6 +167,7 @@ export async function POST(req: NextRequest) {
       calendarEventTitleTemplate: project.calendarEventTitleTemplate,
       projectDescription: project.description,
       locationType: project.locationType,
+      projectFieldIds,
     };
 
     // ── Pending approval via Telegram ─────────────────────────────────────────

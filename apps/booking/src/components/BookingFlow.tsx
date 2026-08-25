@@ -1,12 +1,31 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, startOfDay, addWeeks, isSameDay, parseISO } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, startOfDay, addWeeks, isSameDay } from 'date-fns';
 import type { Project } from '@/config/projects';
 import { formatDuration } from '@/lib/utils';
 import type { TimeSlot } from '@/lib/google-calendar';
+import {
+  HOST_TIMEZONE,
+  formatTimeInZone,
+  formatDateInZone,
+  formatLongDateInZone,
+  friendlyZoneName,
+  zoneDescription,
+  zonesDiffer,
+} from '@/lib/timezone';
+import { LOCATION_CHOICES } from '@/lib/location';
 
 type Step = 'calendar' | 'timeslot' | 'form' | 'submitting' | 'done' | 'pending';
+
+// Stored in customFields under a reserved key so it rides the existing booking
+// plumbing (approval token, calendar invite, emails, Telegram) with no new wiring.
+// Values come from the shared constant: the server decides "in person" by exact
+// match, so a label edited only here would silently mis-describe every booking.
+const LOCATION_OPTIONS = LOCATION_CHOICES.map((value) => ({
+  value,
+  emoji: value === 'Online' ? '💻' : '📍',
+}));
 
 interface FormData {
   name: string;
@@ -124,6 +143,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [form, setForm] = useState<FormData>({
     name: prefill?.name ?? '',
@@ -136,23 +156,100 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   const [submitError, setSubmitError] = useState('');
   const [result, setResult] = useState<BookingResult | null>(null);
 
+  // Resolved after mount only: on the server this would be the deploy region,
+  // not the visitor's zone. Until then we render the server's host-timezone
+  // labels, so hydration matches.
+  const [viewerZone, setViewerZone] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setViewerZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      // Leave null — falls back to the host timezone labels.
+    }
+  }, []);
+
+  const displayZone = viewerZone ?? HOST_TIMEZONE;
+
+  /**
+   * Zone names shift with DST, so label against the instant being shown rather
+   * than "now" — a booking across a changeover would otherwise read EST on an
+   * EDT session.
+   */
+  function zoneLabelAt(iso?: string): string {
+    const at = iso ? new Date(iso) : selectedDate ?? currentMonth;
+    return zoneDescription(displayZone, at);
+  }
+
+  /** Whether the viewer's clock differs from the host's at that instant. */
+  function hostDiffersAt(iso: string): boolean {
+    return viewerZone ? zonesDiffer(viewerZone, HOST_TIMEZONE, new Date(iso)) : false;
+  }
+
+  /** Slot time range in the viewer's zone, falling back to the server labels. */
+  function slotRange(slot: TimeSlot): string {
+    if (!viewerZone) return `${slot.label} – ${slot.endLabel}`;
+    return `${formatTimeInZone(slot.startISO, viewerZone)} – ${formatTimeInZone(slot.endISO, viewerZone)}`;
+  }
+
+  /**
+   * Slots are grouped by the HOST's date, so a slot on "Wed 26" in Manila can be
+   * Tuesday evening for the viewer. Name the viewer's own date on the row
+   * whenever it differs, or the header date silently contradicts the times.
+   */
+  function slotViewerDate(slot: TimeSlot): string | null {
+    if (!viewerZone) return null;
+    const mine = formatDateInZone(slot.startISO, viewerZone);
+    const host = formatDateInZone(slot.startISO, HOST_TIMEZONE);
+    return mine === host ? null : mine;
+  }
+
+  // If the project defines its own field with the reserved id, the booker's
+  // answer wins and we skip injecting the browser timezone.
+  const projectDefinesTimezoneField = project.customFields.some(
+    (f) => f.id === 'booker_timezone',
+  );
+
+  // Same collision, other reserved key: our button group and a project field
+  // called `location_choice` would write one customFields entry (and one
+  // formErrors entry), so whichever the booker touched last silently erases the
+  // other. The server already treats a project-defined field as authoritative
+  // (see the locationIsReserved check in /api/book) — match it and render only
+  // the project's own control.
+  const projectDefinesLocationField = project.customFields.some(
+    (f) => f.id === 'location_choice',
+  );
+  const offerLocationChoice =
+    project.locationType === 'either' && !projectDefinesLocationField;
+
   const today = startOfDay(new Date());
   const maxDate = addWeeks(today, project.bookingWindowWeeks);
 
   const fetchSlots = useCallback(async (date: Date) => {
     setLoadingSlots(true);
     setSlots([]);
+    setSlotsError('');
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const res = await fetch(`/api/availability?slug=${project.slug}&date=${dateStr}`);
+      const params = new URLSearchParams({ slug: project.slug, date: dateStr });
+      // Lets the endpoint serve a paused project to a client who is already
+      // booked on it, the same way the page and /api/book do.
+      if (rescheduleToken) params.set('reschedule', rescheduleToken);
+      const res = await fetch(`/api/availability?${params}`);
+      // fetch resolves on 4xx/5xx. Without this the day would just render "No
+      // slots available", which reads as a full calendar rather than a failure
+      // and hides the breakage from the booker and from us.
+      if (!res.ok) {
+        setSlotsError("We couldn't load times for that day. Please try again.");
+        return;
+      }
       const data = await res.json();
       setSlots(data.slots ?? []);
     } catch {
-      setSlots([]);
+      setSlotsError("We couldn't load times for that day. Please try again.");
     } finally {
       setLoadingSlots(false);
     }
-  }, [project.slug]);
+  }, [project.slug, rescheduleToken]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -189,6 +286,9 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         errors[field.id] = `${field.label} is required`;
       }
     }
+    if (offerLocationChoice && !form.customFields.location_choice) {
+      errors.location_choice = 'Please choose how you would like to meet';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -212,7 +312,16 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           email: form.email,
           phone: form.phone,
           company: form.customFields.company_name || form.company,
-          customFields: form.customFields,
+          customFields: {
+            ...form.customFields,
+            // Lets the confirmation email echo their local time back to them.
+            // Never overwrite a project's own field of the same name — the
+            // booker's answer to it would be silently replaced and then hidden
+            // from their confirmation as internal metadata.
+            ...(viewerZone && !projectDefinesTimezoneField
+              ? { booker_timezone: viewerZone }
+              : {}),
+          },
           ...(rescheduleToken ? { rescheduleToken } : {}),
         }),
       });
@@ -318,7 +427,15 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         </div>
 
         <p className="mt-4 text-xs text-gray-400 text-center">
-          Times shown in Philippines Standard Time (PST)
+          {/* The day cells are HOST dates, so promising "your timezone" here
+              contradicts the slot rows on the next step. */}
+          {viewerZone && zonesDiffer(viewerZone, HOST_TIMEZONE, selectedDate ?? currentMonth) ? (
+            <>
+              Dates are {friendlyZoneName(HOST_TIMEZONE)}; times will show in {zoneLabelAt()}
+            </>
+          ) : (
+            <>Times shown in {zoneLabelAt()}</>
+          )}
         </p>
       </div>
     );
@@ -336,13 +453,31 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Back'}
+          {/* The rows below may carry the viewer's own (different) date, so say
+              whose calendar this heading is on rather than leaving it bare. */}
+          {selectedDate && slots.some((s) => slotViewerDate(s)) && (
+            <span className="text-gray-400"> in {friendlyZoneName(HOST_TIMEZONE)}</span>
+          )}
         </button>
 
-        <p className="text-sm font-semibold text-gray-700 mb-3">Available times</p>
+        <div className="flex items-baseline justify-between mb-3 gap-2">
+          <p className="text-sm font-semibold text-gray-700">Available times</p>
+          <p className="text-xs text-gray-400">{zoneLabelAt(slots[0]?.startISO)}</p>
+        </div>
 
         {loadingSlots ? (
           <div className="flex items-center justify-center py-8">
             <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+          </div>
+        ) : slotsError ? (
+          <div className="text-center py-8">
+            <p className="text-red-600 text-sm">{slotsError}</p>
+            <button
+              onClick={() => selectedDate && fetchSlots(selectedDate)}
+              className="mt-3 text-sm text-gray-600 underline"
+            >
+              Try again
+            </button>
           </div>
         ) : slots.length === 0 ? (
           <div className="text-center py-8">
@@ -373,7 +508,19 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
                   }
                 `}
               >
-                <span>{slot.label} – {slot.endLabel}</span>
+                <span className="flex flex-col items-start">
+                  <span>
+                    {slotViewerDate(slot) && (
+                      <span className="text-gray-500">{slotViewerDate(slot)} · </span>
+                    )}
+                    {slotRange(slot)}
+                  </span>
+                  {hostDiffersAt(slot.startISO) && (
+                    <span className="text-xs font-normal text-gray-400">
+                      {formatTimeInZone(slot.startISO, HOST_TIMEZONE)} in {friendlyZoneName(HOST_TIMEZONE)}
+                    </span>
+                  )}
+                </span>
                 {slot.available ? (
                   <span className="text-xs text-gray-400">{formatDuration(project.durationMinutes)}</span>
                 ) : (
@@ -404,9 +551,17 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         {/* Slot summary */}
         {selectedSlot && selectedDate && (
           <div className="bg-gray-50 rounded-xl p-3 mb-5 text-sm text-gray-600">
-            <span className="font-semibold text-gray-800">{format(selectedDate, 'EEE, MMM d')}</span>
+            <span className="font-semibold text-gray-800">
+              {viewerZone
+                ? formatDateInZone(selectedSlot.startISO, viewerZone)
+                : format(selectedDate, 'EEE, MMM d')}
+            </span>
             {' · '}
-            {selectedSlot.label} – {selectedSlot.endLabel}
+            {slotRange(selectedSlot)}
+            <span className="block text-xs text-gray-400 mt-0.5">
+              {zoneLabelAt(selectedSlot.startISO)}
+              {hostDiffersAt(selectedSlot.startISO) && ` · ${formatTimeInZone(selectedSlot.startISO, HOST_TIMEZONE)} in ${friendlyZoneName(HOST_TIMEZONE)}`}
+            </span>
           </div>
         )}
 
@@ -452,6 +607,33 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
                 placeholder="Where are you from?"
                 className="input-field"
               />
+            </Field>
+          )}
+
+          {/* Booker picks the delivery mode when the project offers both */}
+          {offerLocationChoice && (
+            <Field label="How would you like to meet?" error={formErrors.location_choice} required>
+              <div className="grid grid-cols-2 gap-2">
+                {LOCATION_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        customFields: { ...form.customFields, location_choice: opt.value },
+                      })
+                    }
+                    className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition ${
+                      form.customFields.location_choice === opt.value
+                        ? styles.selectedSlot
+                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {opt.emoji} {opt.value}
+                  </button>
+                ))}
+              </div>
             </Field>
           )}
 
@@ -543,11 +725,12 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{project.name}</p>
           <p className="text-base font-semibold text-gray-900">
-            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            {viewerZone
+              ? formatLongDateInZone(selectedSlot.startISO, viewerZone)
+              : format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
-          <p className="text-gray-600 text-sm mt-0.5">
-            {selectedSlot.label} – {selectedSlot.endLabel}
-          </p>
+          <p className="text-gray-600 text-sm mt-0.5">{slotRange(selectedSlot)}</p>
+          <p className="text-xs text-gray-400 mt-1">{zoneLabelAt(selectedSlot.startISO)}</p>
         </div>
         <a href="/" className="text-sm text-gray-500 hover:text-gray-700 underline">
           Back to home
@@ -558,9 +741,6 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
 
   // ─── STEP: Done ───────────────────────────────────────────────────────────
   if (step === 'done' && result) {
-    const startZoned = parseISO(result.startISO);
-    const endZoned = parseISO(result.endISO);
-
     return (
       <div className="text-center animate-slide-up">
         <div className={`w-16 h-16 ${styles.btn} rounded-full flex items-center justify-center mx-auto mb-4`}>
@@ -576,11 +756,12 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{result.projectName}</p>
           <p className="text-base font-semibold text-gray-900">
-            {format(startZoned, 'EEEE, MMMM d, yyyy')}
+            {formatLongDateInZone(result.startISO, displayZone)}
           </p>
           <p className="text-gray-600 text-sm mt-0.5">
-            {format(startZoned, 'h:mm a')} – {format(endZoned, 'h:mm a')}
+            {formatTimeInZone(result.startISO, displayZone)} – {formatTimeInZone(result.endISO, displayZone)}
           </p>
+          <p className="text-xs text-gray-400 mt-1">{zoneLabelAt(result.startISO)}</p>
         </div>
 
         <a href="/" className="text-sm text-gray-500 hover:text-gray-700 underline">

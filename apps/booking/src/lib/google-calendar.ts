@@ -1,8 +1,15 @@
-import { google } from 'googleapis';
+import { google, type calendar_v3 } from 'googleapis';
 import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
-import { formatDuration } from './utils';
+import { formatDuration, prettifyFieldKey } from './utils';
+import { friendlyZoneName } from './timezone';
+import {
+  ADMIN_LOCATION_KEY,
+  BOOKER_LOCATION_KEY,
+  isInPersonChoice,
+  isLocationChoice,
+} from './location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -126,13 +133,117 @@ export interface BookingDetails {
   customFields: Record<string, string>;
   calendarEventTitleTemplate?: string;
   projectDescription?: string;
-  locationType?: 'online' | 'in_person';
+  locationType?: 'online' | 'in_person' | 'either';
+  /** The project's own custom-field ids, so a project-defined field is never
+   *  mistaken for one of our reserved keys and hidden from the client. */
+  projectFieldIds?: string[];
 }
 
-// Turn a custom-field id into a readable label, e.g. "company_name" → "Company name".
-function prettifyKey(key: string): string {
-  const spaced = key.replace(/[_-]+/g, ' ').trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+/**
+ * Reserved custom-field keys that must never be rendered to the client.
+ * The two location keys are already stated in the location line; `booker_timezone`
+ * is plumbing; `admin_note` is written by the admin for their own records and
+ * the booker is an attendee on the invite, so it would otherwise reach them.
+ */
+export const CLIENT_HIDDEN_FIELDS = new Set([
+  BOOKER_LOCATION_KEY,
+  ADMIN_LOCATION_KEY,
+  'booker_timezone',
+  'admin_note',
+]);
+
+/**
+ * Stricter than hiding: these must never reach the client by ANY route.
+ * The reschedule token is base64url(JSON) + HMAC — signed, not encrypted — and
+ * its URL is emailed to the booker, so anything left in it is readable by them.
+ */
+export const ADMIN_ONLY_FIELDS = new Set(['admin_note']);
+
+/**
+ * Keys only the admin panel ever writes. A project custom field sharing one of
+ * these ids is a naming collision, never the booker answering a question, so
+ * these are never reinterpreted as project-owned content.
+ *
+ * Without this, defining a field called `location_override` would leave the
+ * admin's override stored but unreadable: the reschedule guard would treat the
+ * key as the project's, refuse to restore it from the signed token, and the
+ * rebooked session would quietly revert to the project's default location.
+ */
+export const ADMIN_WRITTEN_FIELDS = new Set([
+  ...Array.from(ADMIN_ONLY_FIELDS),
+  ADMIN_LOCATION_KEY,
+]);
+
+/**
+ * The reserved keys that actually apply to THIS booking. A project may define a
+ * custom field whose id collides with one of ours; the booker's answer to it is
+ * real content and must not be suppressed as internal metadata.
+ *
+ * ADMIN_WRITTEN_FIELDS are exempt from that exemption — they are never a booker
+ * answer, only the admin panel writes them, so a project field sharing the id
+ * must not un-hide them. Worst case we suppress a booker's answer to a
+ * badly-named field; the other way round we print the admin's private note into
+ * the client's invite, or show the raw override next to a contradicting
+ * location sentence.
+ */
+export function hiddenFieldsFor(projectFieldIds: string[] = []): Set<string> {
+  const defined = new Set(projectFieldIds);
+  return new Set(
+    Array.from(CLIENT_HIDDEN_FIELDS).filter(
+      (k) => ADMIN_WRITTEN_FIELDS.has(k) || !defined.has(k),
+    ),
+  );
+}
+
+/** Custom fields safe to round-trip through a client-held token. */
+export function stripAdminOnlyFields(
+  fields: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([k]) => !ADMIN_ONLY_FIELDS.has(k)),
+  );
+}
+
+/**
+ * One human sentence for where the session happens. The booker's own choice
+ * wins over the project default; an 'either' project with no recorded choice
+ * must not promise a joining link for what might be a face-to-face session.
+ * Shared so the invite and the emails cannot drift apart.
+ */
+export function describeLocation(
+  booking: Pick<BookingDetails, 'customFields' | 'locationType' | 'projectFieldIds'>,
+): string {
+  // Two sources, deliberately not interchangeable.
+  //
+  // The admin's override applies to ANY project — booking one online client
+  // against a face-to-face project is the case it exists for — so it wins.
+  //
+  // The booker's own answer counts only while the project still offers the
+  // choice. Once it is fixed to online, a face-to-face answer given months
+  // earlier is stale data, not an instruction, and honouring it would promise
+  // a venue for a session that has none.
+  //
+  // Either is ignored when the id belongs to a project's own custom field,
+  // where the value is the booker's answer to that question, not a location.
+  const defined = new Set(booking.projectFieldIds ?? []);
+  // The override is admin-written, so a project field of that id is a naming
+  // collision, not a booker answer — it never masks the real override.
+  const override = booking.customFields[ADMIN_LOCATION_KEY];
+  const booker =
+    defined.has(BOOKER_LOCATION_KEY) || booking.locationType !== 'either'
+      ? undefined
+      : booking.customFields[BOOKER_LOCATION_KEY];
+  const raw = isLocationChoice(override) ? override : booker;
+  const chosen = isLocationChoice(raw) ? raw : undefined;
+  if (!chosen && booking.locationType === 'either') {
+    return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
+  }
+  const isInPerson = chosen
+    ? isInPersonChoice(chosen)
+    : booking.locationType === 'in_person';
+  return isInPerson
+    ? '📍 In person — we\'ll confirm the exact venue with you'
+    : '💻 Online — we\'ll send the joining link before we start';
 }
 
 // Warm, client-facing invite body. The booker is an attendee, so this is what
@@ -144,10 +255,7 @@ function buildEventDescription(booking: BookingDetails): string {
     differenceInMinutes(new Date(booking.endISO), new Date(booking.startISO)),
   );
 
-  const locationLine =
-    booking.locationType === 'in_person'
-      ? '📍 In person — we\'ll confirm the exact venue with you'
-      : '💻 Online — we\'ll send the joining link before we start';
+  const locationLine = describeLocation(booking);
 
   const detailRows = [
     `Name: ${booking.bookerName}`,
@@ -155,8 +263,8 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
     booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
     ...Object.entries(booking.customFields)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${prettifyKey(k)}: ${v}`),
+      .filter(([k, v]) => v && !hiddenFieldsFor(booking.projectFieldIds).has(k))
+      .map(([k, v]) => `${prettifyFieldKey(k)}: ${v}`),
   ].filter(Boolean);
 
   const lines = [
@@ -164,7 +272,7 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.projectDescription ? `\n${booking.projectDescription}` : null,
     ``,
     `🗓  ${format(zonedStart, 'EEEE, MMMM d, yyyy')}`,
-    `🕐  ${format(zonedStart, 'h:mm a')} – ${format(zonedEnd, 'h:mm a')} (Philippine time · UTC+8)`,
+    `🕐  ${format(zonedStart, 'h:mm a')} – ${format(zonedEnd, 'h:mm a')} (${friendlyZoneName(TIMEZONE)} time)`,
     `⏱  ${durationLabel}`,
     locationLine,
     ``,
@@ -199,7 +307,11 @@ function renderEventTitle(
 export async function createBookingEvent(
   booking: BookingDetails,
   calendarId?: string,
+  // Google emails the attendee its own invite independently of our Resend mail,
+  // so suppressing "notify the client" has to reach this call too.
+  opts: { notifyAttendee?: boolean } = {},
 ): Promise<{ eventId: string; eventLink: string }> {
+  const notifyAttendee = opts.notifyAttendee ?? true;
   const calendar = getCalendarClient();
   const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
@@ -217,7 +329,7 @@ export async function createBookingEvent(
 
   const event = await calendar.events.insert({
     calendarId: calId,
-    sendUpdates: 'all',
+    sendUpdates: notifyAttendee ? 'all' : 'none',
     requestBody: {
       summary: eventSummary,
       description: buildEventDescription(booking),
@@ -229,7 +341,11 @@ export async function createBookingEvent(
         dateTime: booking.endISO,
         timeZone: TIMEZONE,
       },
-      attendees: [{ email: booking.bookerEmail, displayName: booking.bookerName }],
+      // sendUpdates:'none' only suppresses Google's mail; an attendee still
+      // gets the event on their own calendar. "Don't notify" must mean neither.
+      attendees: notifyAttendee
+        ? [{ email: booking.bookerEmail, displayName: booking.bookerName }]
+        : [],
       extendedProperties: {
         private: {
           chiibitsuBooking: 'true',
@@ -258,6 +374,8 @@ export async function cancelBookingEvent(eventId: string, calendarId?: string): 
 
 export interface AdminBooking {
   eventId: string;
+  /** Which calendar the event lives on — cancelling needs it. */
+  calendarId: string;
   projectSlug: string;
   projectName: string;
   bookerName: string;
@@ -273,24 +391,53 @@ export interface AdminBooking {
 
 export async function getUpcomingBookings(): Promise<AdminBooking[]> {
   const calendar = getCalendarClient();
-  const calId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  const defaultCalId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
-  const res = await calendar.events.list({
-    calendarId: calId,
-    privateExtendedProperty: ['chiibitsuBooking=true'],
-    timeMin: new Date().toISOString(),
-    orderBy: 'startTime',
-    singleEvents: true,
-    maxResults: 100,
+  const { getProjects, getAllProjectsAdmin } = await import('@/lib/db');
+  // The manual path can book a PAUSED project, so resolve calendars from the
+  // admin list; getProjects filters to is_active and would hide those bookings.
+  const adminList = await getAllProjectsAdmin().catch(() => []);
+  const projectList = adminList.length > 0 ? adminList : await getProjects();
+
+  // Bookings are created on the project's own calendar when it has one, so
+  // listing only the default calendar would hide them from this list entirely.
+  const calendarIds = Array.from(
+    new Set([defaultCalId, ...projectList.map((p) => p.calendarId).filter(Boolean) as string[]]),
+  );
+
+  type Listed = { calId: string; e: calendar_v3.Schema$Event };
+  const results = await Promise.all(
+    calendarIds.map(async (calId): Promise<Listed[]> => {
+      try {
+        const r = await calendar.events.list({
+          calendarId: calId,
+          privateExtendedProperty: ['chiibitsuBooking=true'],
+          timeMin: new Date().toISOString(),
+          orderBy: 'startTime',
+          singleEvents: true,
+          maxResults: 100,
+        });
+        return (r.data.items ?? []).map((e) => ({ calId, e }));
+      } catch (err) {
+        // One unreachable calendar must not empty the whole list.
+        console.error(`getUpcomingBookings: calendar ${calId} failed:`, err);
+        return [];
+      }
+    }),
+  );
+
+  // 'primary' and the account's explicit address are distinct strings but the
+  // same calendar, so the same event can arrive twice.
+  const seenIds = new Set<string>();
+  const events = results.flat().filter(({ e }) => {
+    if (!e.id || seenIds.has(e.id)) return false;
+    seenIds.add(e.id);
+    return true;
   });
 
-  const events = res.data.items ?? [];
-  const { getProjects } = await import('@/lib/db');
-  const projectList = await getProjects();
-
   return events
-    .filter((e) => e.start?.dateTime)
-    .map((e) => {
+    .filter(({ e }) => e.start?.dateTime)
+    .map(({ calId, e }) => {
       const props = e.extendedProperties?.private ?? {};
       const slug = props.projectSlug ?? '';
       const project = projectList.find((p) => p.slug === slug);
@@ -306,6 +453,7 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
 
       return {
         eventId: e.id ?? '',
+        calendarId: calId,
         projectSlug: slug,
         projectName: project?.name ?? slug,
         bookerName: props.bookerName ?? '',
@@ -318,5 +466,51 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
         timeLabel: format(zonedStart, 'h:mm a'),
         customFields,
       };
+    })
+    // Merged from several calendars, so each list's own ordering no longer
+    // holds. Compare instants: the strings carry per-calendar UTC offsets.
+    .sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime());
+}
+
+/**
+ * Existing events overlapping a window, on the calendar a booking would land on.
+ * The manual admin path intentionally ignores slot templates, but silently
+ * double-booking is a different thing from ignoring a template.
+ */
+export async function findConflicts(
+  startISO: string,
+  endISO: string,
+  calendarId?: string,
+): Promise<string[]> {
+  const calendar = getCalendarClient();
+  const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  try {
+    const res = await calendar.events.list({
+      calendarId: calId,
+      timeMin: startISO,
+      timeMax: endISO,
+      singleEvents: true,
+      maxResults: 10,
     });
+    return (res.data.items ?? [])
+      .filter((e) => e.transparency !== 'transparent')
+      .map((e) => {
+        const label = e.summary ?? 'Untitled';
+        // All-day events (a vacation or out-of-office block) carry start.date,
+        // not start.dateTime. Filtering on dateTime dropped them even though
+        // events.list had returned them as overlapping the window — so the
+        // admin got no conflict warning for booking straight into leave.
+        if (e.start?.dateTime) {
+          const zoned = toZonedTime(new Date(e.start.dateTime), TIMEZONE);
+          return `${label} (${format(zoned, 'h:mm a')})`;
+        }
+        if (e.start?.date) return `${label} (all day)`;
+        return null;
+      })
+      .filter((l): l is string => l !== null);
+  } catch (err) {
+    // A freebusy failure must not block a booking the admin has decided on.
+    console.error('findConflicts failed:', err);
+    return [];
+  }
 }

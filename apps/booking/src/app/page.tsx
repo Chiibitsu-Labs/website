@@ -1,6 +1,7 @@
 import { siteConfig } from '@/config/projects';
 import { getProjects } from '@/lib/db';
 import { ProjectCard } from '@/components/ProjectCard';
+import { TimezoneNote } from '@/components/TimezoneNote';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function HomePage() {
         </div>
 
         <p className="mt-10 text-xs text-gray-400 text-center">
-          All times shown in Philippines Standard Time (PST, UTC+8)
+          <TimezoneNote />
         </p>
       </main>
     </div>

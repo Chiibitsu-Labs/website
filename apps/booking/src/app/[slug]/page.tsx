@@ -1,15 +1,15 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/config/projects';
-import { getProjectBySlug } from '@/lib/db';
+import { resolveProjectForSlug, rescheduleTokenMatchesProject } from '@/lib/db';
+import { ADMIN_LOCATION_KEY, BOOKER_LOCATION_KEY } from '@/lib/location';
 import { BookingFlow } from '@/components/BookingFlow';
+import { TimezoneChip } from '@/components/TimezoneChip';
+import { LocalTimeLabel } from '@/components/LocalTimeLabel';
 import { formatDuration } from '@/lib/utils';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
-import { format, parseISO, addDays, isBefore } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { parseISO, addDays, isBefore } from 'date-fns';
 import Link from 'next/link';
-
-const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +18,23 @@ interface Props {
   searchParams: { reschedule?: string | string[] };
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const project = await getProjectBySlug(params.slug);
+/**
+ * The verified reschedule token from the URL, but only when it names this
+ * project — a token for a different session is not a reschedule of this one.
+ */
+function rescheduleFor(slug: string, searchParams: Props['searchParams']) {
+  const param = typeof searchParams.reschedule === 'string' ? searchParams.reschedule : undefined;
+  const verified = param ? verifyRescheduleToken(param) : null;
+  return rescheduleTokenMatchesProject(verified, slug) ? verified : null;
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  // Resolve exactly as the page does, or a paused project's reschedule page
+  // would render fully but with no title.
+  const project = await resolveProjectForSlug(
+    params.slug,
+    rescheduleFor(params.slug, searchParams),
+  );
   if (!project) return {};
   return {
     title: `Book: ${project.name}`,
@@ -28,35 +43,64 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BookPage({ params, searchParams }: Props) {
-  const project = await getProjectBySlug(params.slug);
-  if (!project) notFound();
-
   // Handle reschedule mode
   const rescheduleParam = typeof searchParams.reschedule === 'string' ? searchParams.reschedule : undefined;
+  // A token for a DIFFERENT project is not a reschedule of this one: honouring
+  // it would prefill this page with another booking's details and let /api/book
+  // cancel that unrelated event.
+  const payload = rescheduleFor(params.slug, searchParams);
+
+  // A verified token proves this person is already booked on the project, so
+  // pausing it must not 404 their reschedule link — or, for a seed slug, hand
+  // them the hard-coded seed config and rebook them on the wrong calendar.
+  // The token must name THIS project; resolveProjectForSlug enforces that.
+  const project = await resolveProjectForSlug(params.slug, payload);
+  if (!project) notFound();
+
   let rescheduleInfo: {
     token: string;
-    originalLabel: string;
+    originalStartISO: string;
     prefill: { name: string; email: string; phone: string; company: string; customFields: Record<string, string> };
   } | null = null;
   let rescheduleWindowClosed = false;
 
+  const keepStoredLocation =
+    project.locationType === 'either' ||
+    project.customFields.some((f) => f.id === BOOKER_LOCATION_KEY);
+
+  /** Keys the form must not carry back: not questions, and set server-side. */
+  const dropFromPrefill = (key: string) =>
+    // The admin's override is restored from the signed token by /api/book, so
+    // round-tripping it through the client would add nothing but a way to
+    // tamper with it.
+    key === ADMIN_LOCATION_KEY || (!keepStoredLocation && key === BOOKER_LOCATION_KEY);
+
   if (rescheduleParam) {
-    const payload = verifyRescheduleToken(rescheduleParam);
     if (payload) {
       const canReschedule = isBefore(addDays(new Date(), 7), parseISO(payload.originalStartISO));
       if (!canReschedule) {
         rescheduleWindowClosed = true;
       } else {
-        const zonedOriginal = toZonedTime(parseISO(payload.originalStartISO), TIMEZONE);
         rescheduleInfo = {
           token: rescheduleParam,
-          originalLabel: format(zonedOriginal, "EEE, MMM d 'at' h:mm a"),
+          // Pass the instant, not a pre-formatted host-zone string: every other
+          // time on this page now renders in the viewer's own zone, and an
+          // unlabelled Manila time here would tell a Toronto booker their
+          // session is at 9:00 AM when for them it is 9:00 PM the day before.
+          originalStartISO: payload.originalStartISO,
           prefill: {
             name: payload.bookerName,
             email: payload.bookerEmail,
             phone: payload.bookerPhone,
             company: payload.bookerCompany,
-            customFields: payload.customFields,
+            // Drop a stale location once the project stops offering both, or
+            // the picker is hidden and the old value silently carries over.
+            // The booker key survives when the project defines its own field of
+            // that id — there it is their answer to a visible question, and
+            // dropping it would blank their form.
+            customFields: Object.fromEntries(
+              Object.entries(payload.customFields).filter(([k]) => !dropFromPrefill(k)),
+            ),
           },
         };
       }
@@ -106,7 +150,12 @@ export default async function BookPage({ params, searchParams }: Props) {
               {formatDuration(project.durationMinutes)}
             </span>
             <span className="flex items-center gap-1.5">
-              {project.locationType === 'in_person' ? (
+              {project.locationType === 'either' ? (
+                // Neither a pin nor a camera: the format is not settled yet.
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              ) : project.locationType === 'in_person' ? (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -116,15 +165,13 @@ export default async function BookPage({ params, searchParams }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               )}
-              {project.locationType === 'in_person' ? 'Face to face' : 'Online'}
+              {project.locationType === 'in_person'
+                ? 'Face to face'
+                : project.locationType === 'either'
+                ? 'Online or face to face'
+                : 'Online'}
             </span>
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              PST (UTC+8)
-            </span>
+            <TimezoneChip />
           </div>
         </div>
       </div>
@@ -146,7 +193,9 @@ export default async function BookPage({ params, searchParams }: Props) {
         {rescheduleInfo && (
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 text-sm">
             <p className="font-semibold text-blue-900">Rescheduling your booking</p>
-            <p className="text-blue-700 mt-0.5">Currently booked: {rescheduleInfo.originalLabel}</p>
+            <p className="text-blue-700 mt-0.5">
+              Currently booked: <LocalTimeLabel iso={rescheduleInfo.originalStartISO} />
+            </p>
             <p className="text-blue-600 text-xs mt-1">Pick a new date and time below. Your original slot will be released once your new booking is confirmed.</p>
           </div>
         )}
