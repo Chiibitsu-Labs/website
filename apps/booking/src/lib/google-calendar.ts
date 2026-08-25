@@ -143,23 +143,31 @@ export interface BookingDetails {
 export const CLIENT_HIDDEN_FIELDS = new Set(['location_choice', 'booker_timezone', 'admin_note']);
 
 /**
- * The reserved keys that actually apply to THIS booking. A project may define a
- * custom field whose id collides with one of ours; the booker's answer to it is
- * real content and must not be suppressed as internal metadata.
- */
-export function hiddenFieldsFor(projectFieldIds: string[] = []): Set<string> {
-  const defined = new Set(projectFieldIds);
-  return new Set(
-    Array.from(CLIENT_HIDDEN_FIELDS).filter((k) => !defined.has(k)),
-  );
-}
-
-/**
  * Stricter than hiding: these must never reach the client by ANY route.
  * The reschedule token is base64url(JSON) + HMAC — signed, not encrypted — and
  * its URL is emailed to the booker, so anything left in it is readable by them.
  */
 export const ADMIN_ONLY_FIELDS = new Set(['admin_note']);
+
+/**
+ * The reserved keys that actually apply to THIS booking. A project may define a
+ * custom field whose id collides with one of ours; the booker's answer to it is
+ * real content and must not be suppressed as internal metadata.
+ *
+ * ADMIN_ONLY_FIELDS are exempt from that exemption. `admin_note` is never a
+ * booker answer — only the admin panel writes it, under a label promising the
+ * client never sees it — so a project field sharing the id must not un-hide it.
+ * Worst case we suppress a booker's answer to a badly-named field; the other
+ * way round we print the admin's private note into the client's invite.
+ */
+export function hiddenFieldsFor(projectFieldIds: string[] = []): Set<string> {
+  const defined = new Set(projectFieldIds);
+  return new Set(
+    Array.from(CLIENT_HIDDEN_FIELDS).filter(
+      (k) => ADMIN_ONLY_FIELDS.has(k) || !defined.has(k),
+    ),
+  );
+}
 
 /** Custom fields safe to round-trip through a client-held token. */
 export function stripAdminOnlyFields(

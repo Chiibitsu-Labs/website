@@ -151,7 +151,15 @@ export async function POST(req: NextRequest) {
       calendarEventTitleTemplate: project.calendarEventTitleTemplate,
       projectDescription: project.description,
       locationType: project.locationType,
-      projectFieldIds: project.customFields.map((f) => f.id),
+      // projectFieldIds marks values that came from the BOOKER answering the
+      // project's own field, so downstream treats them as client content rather
+      // than our reserved metadata. A manual booking collects none of those —
+      // every entry in customFields above was written by the admin — so passing
+      // the project's ids would make a field that merely shares a reserved id
+      // reinterpret the admin's own input: the location override would be
+      // discarded (falling back to the project default, contradicting what was
+      // booked) and then printed to the client as a raw detail row.
+      projectFieldIds: [],
     };
 
     // Ignoring the slot template is intended; silently double-booking is not.
