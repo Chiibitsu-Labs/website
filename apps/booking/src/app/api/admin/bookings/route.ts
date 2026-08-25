@@ -94,15 +94,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Interpret the admin's date/time as host-timezone wall clock, then store
-    // the real UTC instant — same contract the slot generator uses.
-    const wallClock = new Date(`${date}T00:00:00`);
-    if (Number.isNaN(wallClock.getTime())) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
       return NextResponse.json({ error: 'Invalid date. Use YYYY-MM-DD.' }, { status: 400 });
     }
-    wallClock.setHours(hour, minute, 0, 0);
 
-    const startUTC = fromZonedTime(wallClock, TIMEZONE);
+    // Hand fromZonedTime the wall-clock STRING rather than a Date. Building a
+    // Date first reads its fields in the machine's own zone, so the same input
+    // resolved differently on a UTC server and in the admin's browser preview
+    // around a DST boundary. A string has no such ambiguity.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startUTC = fromZonedTime(`${date}T${pad(hour)}:${pad(minute)}:00`, TIMEZONE);
+    if (Number.isNaN(startUTC.getTime())) {
+      return NextResponse.json({ error: 'Invalid date or time.' }, { status: 400 });
+    }
     const minutes = Number(durationMinutes) > 0 ? Number(durationMinutes) : project.durationMinutes;
     const endUTC = addMinutes(startUTC, minutes);
 
@@ -120,7 +124,9 @@ export async function POST(req: NextRequest) {
     if (locationChoice) customFields.location_choice = locationChoice;
     if (bookerTimezone) customFields.booker_timezone = bookerTimezone;
     // Reserved key, filtered out of every client-facing surface.
-    if (notes) customFields.admin_note = notes;
+    // Google caps extendedProperties.private values, and every custom field
+    // shares one serialised value — an unbounded note would 400 events.insert.
+    if (notes) customFields.admin_note = String(notes).slice(0, 500);
 
     const booking = {
       projectName: project.name,

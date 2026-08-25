@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 
 interface TallyField {
   key: string;
@@ -25,7 +25,13 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
   return sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
+// Every value here is respondent-controlled and goes into a Markdown payload,
+// so escape at the source rather than at each of the dozen interpolations.
 function fieldValue(fields: TallyField[], label: string): string {
+  return escapeMarkdown(rawFieldValue(fields, label));
+}
+
+function rawFieldValue(fields: TallyField[], label: string): string {
   const f = fields.find((x) => x.label === label);
   if (!f || f.value === null || f.value === undefined) return '';
   if (typeof f.value === 'string') return f.value;
@@ -66,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const lines = [
     `💳 *Payment confirmation received*`,
-    formName ? `📋 ${formName}` : null,
+    formName ? `📋 ${escapeMarkdown(formName)}` : null,
     ``,
     companyName ? `🏢 ${companyName}` : null,
     `👤 ${name}`,

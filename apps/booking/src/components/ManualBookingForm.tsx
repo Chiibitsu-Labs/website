@@ -96,6 +96,10 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   const selected = projects.find((p) => p.slug === form.slug);
 
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    // Any edit invalidates a previous conflict verdict; leaving "Book it
+    // anyway" on screen would let it apply to a slot never checked.
+    setError('');
+    setConflict(false);
     setForm((prev) => {
       const next = { ...prev, [key]: value };
       // Default the duration to whatever the chosen project uses, and drop the
@@ -115,10 +119,15 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   const previewStart = (() => {
     if (!form.date || !form.time) return null;
     const [h, m] = form.time.split(':').map(Number);
-    const wall = new Date(`${form.date}T00:00:00`);
-    if (Number.isNaN(wall.getTime()) || !Number.isFinite(h)) return null;
-    wall.setHours(h, Number.isFinite(m) ? m : 0, 0, 0);
-    return fromZonedTime(wall, HOST_TIMEZONE);
+    if (!Number.isInteger(h) || h < 0 || h > 23) return null;
+    const min = Number.isInteger(m) ? m : 0;
+    if (min < 0 || min > 59) return null;
+    // Same wall-clock-string contract as the server route: building a Date
+    // first would read its fields in the admin's own zone, so this preview
+    // and the stored booking could disagree across a DST boundary.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const at = fromZonedTime(`${form.date}T${pad(h)}:${pad(min)}:00`, HOST_TIMEZONE);
+    return Number.isNaN(at.getTime()) ? null : at;
   })();
   const minutes = form.durationMinutes > 0 ? form.durationMinutes : selected?.durationMinutes ?? 60;
   const previewEnd = previewStart ? addMinutes(previewStart, minutes) : null;

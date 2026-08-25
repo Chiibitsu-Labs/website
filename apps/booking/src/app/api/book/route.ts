@@ -54,6 +54,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // BookingFlow requires this choice, but client-side validation is not a
+    // guarantee — and the admin route already enforces it, so accepting it here
+    // would let the same input land as "format to be confirmed" via one path
+    // and be rejected by the other.
+    if (project.locationType === 'either' && !customFields.location_choice) {
+      return NextResponse.json(
+        { error: 'Please choose whether you would like to meet online or face to face.' },
+        { status: 400 },
+      );
+    }
+
     // Verify slot exists and isn't blocked by an existing Google Calendar event
     const dateStr = startISO.slice(0, 10);
     const slots = await getAvailableSlots(project, dateStr);

@@ -8,7 +8,7 @@ import {
   sendRejectionEmail,
   sendBookingNotificationToAdmin,
 } from '@/lib/email';
-import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 
 function page(icon: string, heading: string, body: string) {
   return new NextResponse(
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     await sendRejectionEmail(booking, project).catch(() => {});
     if (hasTelegram()) {
       await sendSimpleMessage(
-        `❌ *Rejected* · ${project.name} · ${payload.name}\nRejection email sent to ${payload.email}`,
+        `❌ *Rejected* · ${escapeMarkdown(project.name)} · ${escapeMarkdown(payload.name)}\nRejection email sent to ${escapeMarkdown(payload.email)}`,
       ).catch(() => {});
     }
     return page(
@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
         ? ` · ${new Date(booking.startISO).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}`
         : '';
       await sendSimpleMessage(
-        `✅ *Approved* · ${project.name} · ${payload.name}${dateInfo}\nConfirmation email sent to ${payload.email}`,
+        `✅ *Approved* · ${escapeMarkdown(project.name)} · ${escapeMarkdown(payload.name)}${dateInfo}\nConfirmation email sent to ${escapeMarkdown(payload.email)}`,
       ).catch(() => {});
     }
 
