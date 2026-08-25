@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { AdminBooking } from '@/lib/google-calendar';
 import type { Project } from '@/config/projects';
 import { ProjectEditor } from './ProjectEditor';
+import { ManualBookingForm } from './ManualBookingForm';
 
 type Tab = 'bookings' | 'projects' | 'setup';
 type AdminProject = Project & { isActive: boolean; id: string };
@@ -116,6 +117,7 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterSlug, setFilterSlug] = useState('all');
+  const [adding, setAdding] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -137,10 +139,27 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
         <h2 className="text-white font-bold text-xl">Upcoming Bookings</h2>
-        <button onClick={load} className="text-gray-400 hover:text-white text-sm transition">↻ Refresh</button>
+        <div className="flex items-center gap-3">
+          <button onClick={load} className="text-gray-400 hover:text-white text-sm transition">↻ Refresh</button>
+          <button
+            onClick={() => setAdding(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition"
+          >
+            + Add booking
+          </button>
+        </div>
       </div>
+
+      {adding && (
+        <ManualBookingForm
+          adminEmail={adminEmail}
+          adminPassword={adminPassword}
+          onSaved={() => { setAdding(false); load(); }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
       <div className="flex gap-2 mb-5 flex-wrap">
         <FilterBtn active={filterSlug === 'all'} onClick={() => setFilterSlug('all')}>All</FilterBtn>
         {uniqueSlugs.map((slug) => (
