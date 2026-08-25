@@ -71,10 +71,15 @@ export async function getProjects(): Promise<Project[]> {
   const client = getClient();
   if (!client) return SEED_PROJECTS;
 
+  // Fetch paused rows too, then filter here. Filtering in the query made an
+  // empty result ambiguous: "table not seeded yet" and "every project is
+  // paused" looked identical, and the latter fell through to SEED_PROJECTS —
+  // so pausing everything would advertise the two hard-coded seed sessions as
+  // bookable. An existing row means the table IS seeded; an empty active list
+  // is then a real answer, not a reason to substitute seed data.
   const { data, error } = await client
     .from('booking_projects')
     .select('*')
-    .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -82,62 +87,73 @@ export async function getProjects(): Promise<Project[]> {
     console.error('DB getProjects error:', error);
     return SEED_PROJECTS;
   }
-  const rows = (data ?? []).map(rowToProject);
-  return rows.length > 0 ? rows : SEED_PROJECTS;
+  const all: ProjectRow[] = data ?? [];
+  if (all.length === 0) return SEED_PROJECTS;
+  return all.filter((row) => row.is_active).map(rowToProject);
+}
+
+/**
+ * The row for this slug, `is_active` ignored.
+ *
+ * `answered: false` means the database could not tell us anything (not
+ * configured, or the query failed) — only then may seed data stand in. It is
+ * deliberately distinct from `row: null`, which is a definite "no such
+ * project": conflating the two is what let a PAUSED seed-slug project keep
+ * serving hard-coded seed config instead of disappearing.
+ */
+async function loadProjectRow(
+  slug: string,
+): Promise<{ row: ProjectRow | null; answered: boolean }> {
+  const client = getClient();
+  if (!client) return { row: null, answered: false };
+
+  const { data, error } = await client
+    .from('booking_projects')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error('DB project lookup error:', error);
+    return { row: null, answered: false };
+  }
+  return { row: (data as ProjectRow) ?? null, answered: true };
+}
+
+/** Seed data stands in only where it always has: an unanswerable database, or
+ *  a slug with no row at all (the table may simply not be seeded yet). */
+function seedFallback(slug: string): Project | null {
+  return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   noStore(); // always read the live row so admin changes (location, colour, copy) show immediately
-  const client = getClient();
-  if (!client) {
-    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  }
-
-  const { data, error } = await client
-    .from('booking_projects')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (error) {
-    console.error('DB getProjectBySlug error:', error);
-    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  }
-  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  return rowToProject(data);
+  const { row, answered } = await loadProjectRow(slug);
+  if (!answered) return seedFallback(slug);
+  if (!row) return seedFallback(slug);
+  // A row that exists but is paused is a definite no. Filtering is_active in
+  // the query instead made "paused" indistinguishable from "absent", so the two
+  // seed slugs (ai-at-work, aicos-fit-call) fell through to SEED_PROJECTS and
+  // stayed publicly bookable after being paused — on the seed's duration, slot
+  // templates and default calendar rather than the project's real settings.
+  if (!row.is_active) return null;
+  return rowToProject(row);
 }
 
 /**
  * Same lookup, but ignoring `is_active` — for holders of a valid, signed
- * reschedule token only.
+ * reschedule token naming this project, and for the Telegram approval step.
  *
- * A project can be paused after a client is booked on it (the admin can book a
- * paused project by hand deliberately). Their reschedule link would then hit
- * getProjectBySlug, find no active row, and 404 — or, for a seed slug, silently
- * fall through to hard-coded SEED_PROJECTS and reschedule them against the
- * wrong calendar, duration and title. Pausing a project stops NEW bookings; it
- * must not strand the people already booked.
+ * A project can be paused after a client is booked on it. Their reschedule link
+ * would otherwise 404, stranding someone already booked. Pausing stops NEW
+ * bookings; it must not strand existing clients.
  */
 export async function getProjectBySlugIncludingPaused(slug: string): Promise<Project | null> {
   noStore();
-  const client = getClient();
-  if (!client) {
-    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  }
-
-  const { data, error } = await client
-    .from('booking_projects')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error) {
-    console.error('DB getProjectBySlugIncludingPaused error:', error);
-    return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  }
-  if (!data) return SEED_PROJECTS.find((p) => p.slug === slug) ?? null;
-  return rowToProject(data);
+  const { row, answered } = await loadProjectRow(slug);
+  if (!answered) return seedFallback(slug);
+  if (!row) return seedFallback(slug);
+  return rowToProject(row);
 }
 
 /**
