@@ -160,21 +160,37 @@ export const CLIENT_HIDDEN_FIELDS = new Set([
 export const ADMIN_ONLY_FIELDS = new Set(['admin_note']);
 
 /**
+ * Keys only the admin panel ever writes. A project custom field sharing one of
+ * these ids is a naming collision, never the booker answering a question, so
+ * these are never reinterpreted as project-owned content.
+ *
+ * Without this, defining a field called `location_override` would leave the
+ * admin's override stored but unreadable: the reschedule guard would treat the
+ * key as the project's, refuse to restore it from the signed token, and the
+ * rebooked session would quietly revert to the project's default location.
+ */
+export const ADMIN_WRITTEN_FIELDS = new Set([
+  ...Array.from(ADMIN_ONLY_FIELDS),
+  ADMIN_LOCATION_KEY,
+]);
+
+/**
  * The reserved keys that actually apply to THIS booking. A project may define a
  * custom field whose id collides with one of ours; the booker's answer to it is
  * real content and must not be suppressed as internal metadata.
  *
- * ADMIN_ONLY_FIELDS are exempt from that exemption. `admin_note` is never a
- * booker answer — only the admin panel writes it, under a label promising the
- * client never sees it — so a project field sharing the id must not un-hide it.
- * Worst case we suppress a booker's answer to a badly-named field; the other
- * way round we print the admin's private note into the client's invite.
+ * ADMIN_WRITTEN_FIELDS are exempt from that exemption — they are never a booker
+ * answer, only the admin panel writes them, so a project field sharing the id
+ * must not un-hide them. Worst case we suppress a booker's answer to a
+ * badly-named field; the other way round we print the admin's private note into
+ * the client's invite, or show the raw override next to a contradicting
+ * location sentence.
  */
 export function hiddenFieldsFor(projectFieldIds: string[] = []): Set<string> {
   const defined = new Set(projectFieldIds);
   return new Set(
     Array.from(CLIENT_HIDDEN_FIELDS).filter(
-      (k) => ADMIN_ONLY_FIELDS.has(k) || !defined.has(k),
+      (k) => ADMIN_WRITTEN_FIELDS.has(k) || !defined.has(k),
     ),
   );
 }
@@ -210,9 +226,9 @@ export function describeLocation(
   // Either is ignored when the id belongs to a project's own custom field,
   // where the value is the booker's answer to that question, not a location.
   const defined = new Set(booking.projectFieldIds ?? []);
-  const override = defined.has(ADMIN_LOCATION_KEY)
-    ? undefined
-    : booking.customFields[ADMIN_LOCATION_KEY];
+  // The override is admin-written, so a project field of that id is a naming
+  // collision, not a booker answer — it never masks the real override.
+  const override = booking.customFields[ADMIN_LOCATION_KEY];
   const booker =
     defined.has(BOOKER_LOCATION_KEY) || booking.locationType !== 'either'
       ? undefined

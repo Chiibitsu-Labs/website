@@ -110,17 +110,20 @@ export async function POST(req: NextRequest) {
      * both modes is stale once it is fixed to one, and reviving it would
      * promise a face-to-face session on an online-only project.
      */
+    // Unconditionally ours: only the admin panel writes this key, so a project
+    // field sharing the id is a naming collision, not a booker answer. Guarding
+    // on projectFieldIds here would leave the override stored but unreadable —
+    // never restored, and dropped from the prefill — so the rebooked session
+    // reverted to the project default.
     const adminOverride = reschedulePayload?.customFields?.[ADMIN_LOCATION_KEY];
-    if (!projectFieldIds.includes(ADMIN_LOCATION_KEY)) {
-      delete customFields[ADMIN_LOCATION_KEY];
-      // Restored only where the booker was NOT asked. On an 'either' project
-      // the form just required them to choose, and an override carried forward
-      // would overrule the answer they gave seconds ago — and since each new
-      // token re-carries it, no later reschedule could escape either, leaving
-      // the picker permanently cosmetic for that booking.
-      if (project.locationType !== 'either' && isLocationChoice(adminOverride)) {
-        customFields[ADMIN_LOCATION_KEY] = adminOverride;
-      }
+    delete customFields[ADMIN_LOCATION_KEY];
+    // Restored only where the booker was NOT asked. On an 'either' project the
+    // form just required them to choose, and an override carried forward would
+    // overrule the answer they gave seconds ago — and since each new token
+    // re-carries it, no later reschedule could escape either, leaving the
+    // picker permanently cosmetic for that booking.
+    if (project.locationType !== 'either' && isLocationChoice(adminOverride)) {
+      customFields[ADMIN_LOCATION_KEY] = adminOverride;
     }
     if (locationIsReserved && project.locationType !== 'either') {
       delete customFields[BOOKER_LOCATION_KEY];

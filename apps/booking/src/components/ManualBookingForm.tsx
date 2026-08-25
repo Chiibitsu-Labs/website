@@ -202,7 +202,11 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
         <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-xl my-8 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
             <h2 className="text-white font-bold text-lg">Add a booking manually</h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-white p-1">
+            <button
+              onClick={onCancel}
+              disabled={saving}
+              className="text-gray-400 hover:text-white disabled:opacity-40 p-1"
+            >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -368,7 +372,11 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
             </button>
             <button
               onClick={onCancel}
-              className="px-5 py-2.5 text-gray-400 hover:text-white transition"
+              // Closing mid-save does not abort the request: the event still
+              // gets created and the client still gets emailed, for a booking
+              // the admin believes they cancelled.
+              disabled={saving}
+              className="px-5 py-2.5 text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400 transition"
             >
               Cancel
             </button>

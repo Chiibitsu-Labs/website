@@ -5,6 +5,7 @@ import { createBookingEvent, findConflicts, getUpcomingBookings } from '@/lib/go
 import { sendBookingConfirmationToBooker } from '@/lib/email';
 import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 import { getAllProjectsAdmin } from '@/lib/db';
+import { SEED_PROJECTS } from '@/config/projects';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { errorMessage } from '@/lib/utils';
 import { ADMIN_LOCATION_KEY, LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
@@ -69,7 +70,15 @@ export async function POST(req: NextRequest) {
     // is_active and falls back to hard-coded SEED_PROJECTS, so booking a paused
     // project would 404 — or worse, silently use seed config (wrong calendar,
     // duration and title) for the two seed slugs.
-    const project = (await getAllProjectsAdmin()).find((p) => p.slug === slug);
+    // With no database configured (or an empty table) the public flow serves
+    // SEED_PROJECTS, so a seed project is visible and bookable by clients while
+    // the admin list is empty — booking one by hand would 404 for a session the
+    // site is actively offering. Fall back to the same source the public flow
+    // uses, but only when there are no rows: a real row must always win.
+    const adminProjects = await getAllProjectsAdmin();
+    const project =
+      adminProjects.find((p) => p.slug === slug) ??
+      (adminProjects.length === 0 ? SEED_PROJECTS.find((p) => p.slug === slug) : undefined);
     if (!project) {
       return NextResponse.json({ error: `No project found for "${slug}".` }, { status: 404 });
     }

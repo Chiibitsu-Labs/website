@@ -83,7 +83,14 @@ function buildRescheduleUrl(booking: BookingDetails, eventId: string, calendarId
     customFields: stripAdminOnlyFields(booking.customFields),
     originalStartISO: booking.startISO,
     originalEndISO: booking.endISO,
-    expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+    // A flat 90 days assumed bookings are always near-term. The admin can now
+    // book any future date by hand, so a session eight months out would have
+    // handed the client a link that died months before their own reschedule
+    // deadline. Never expire before the session itself.
+    expiresAt: Math.max(
+      Date.now() + 90 * 24 * 60 * 60 * 1000,
+      new Date(booking.startISO).getTime() + 24 * 60 * 60 * 1000,
+    ),
   });
   return `${baseUrl}/${booking.projectSlug}?reschedule=${token}`;
 }
