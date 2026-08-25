@@ -140,6 +140,35 @@ export async function getProjectBySlugIncludingPaused(slug: string): Promise<Pro
   return rowToProject(data);
 }
 
+/**
+ * THE rule for which public surfaces may see a paused project, in one place.
+ *
+ * A reschedule token is proof the holder is already booked — but only on the
+ * project the token itself names. Without that match, any live token (or one
+ * forwarded to someone else) would unlock every paused project on the site:
+ * an unlaunched draft's page would render, and /api/book would take a booking
+ * on it, defeating the pause entirely.
+ *
+ * The page, /api/availability and /api/book each verify their own token (they
+ * need the payload anyway) and then come here, so the three cannot drift.
+ */
+export function rescheduleTokenMatchesProject(
+  payload: { projectSlug: string } | null | undefined,
+  slug: string,
+): boolean {
+  return payload?.projectSlug === slug;
+}
+
+/** Active-only by default; paused too for a token that names this project. */
+export async function resolveProjectForSlug(
+  slug: string,
+  reschedulePayload: { projectSlug: string } | null | undefined,
+): Promise<Project | null> {
+  return rescheduleTokenMatchesProject(reschedulePayload, slug)
+    ? getProjectBySlugIncludingPaused(slug)
+    : getProjectBySlug(slug);
+}
+
 export async function getAllProjectsAdmin(): Promise<(Project & { isActive: boolean; id: string })[]> {
   noStore();
   const client = getClient();

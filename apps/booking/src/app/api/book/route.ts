@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectBySlug, getProjectBySlugIncludingPaused } from '@/lib/db';
+import { resolveProjectForSlug, rescheduleTokenMatchesProject } from '@/lib/db';
 import { createBookingEvent, getAvailableSlots, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendBookingConfirmationToBooker,
@@ -37,6 +37,16 @@ export async function POST(req: NextRequest) {
       if (!reschedulePayload) {
         return NextResponse.json({ error: 'Invalid or expired reschedule link.' }, { status: 400 });
       }
+      // The token must name the project being booked. Otherwise a token for one
+      // project would authorise a booking on any other — including a paused one
+      // via the branch below — and, worse, cancel the unrelated event this
+      // token does point at once the new booking is confirmed.
+      if (!rescheduleTokenMatchesProject(reschedulePayload, slug)) {
+        return NextResponse.json(
+          { error: 'That reschedule link is for a different session.' },
+          { status: 400 },
+        );
+      }
       // Enforce 1-week-before rule
       if (!isBefore(addDays(new Date(), 7), new Date(reschedulePayload.originalStartISO))) {
         return NextResponse.json(
@@ -50,11 +60,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // A valid reschedule token is proof this person was already booked on the
-    // project, so a pause must not strand them mid-reschedule.
-    const project = reschedulePayload
-      ? await getProjectBySlugIncludingPaused(slug)
-      : await getProjectBySlug(slug);
+    // A valid reschedule token for THIS project is proof the person was already
+    // booked on it, so a pause must not strand them mid-reschedule.
+    const project = await resolveProjectForSlug(slug, reschedulePayload);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }

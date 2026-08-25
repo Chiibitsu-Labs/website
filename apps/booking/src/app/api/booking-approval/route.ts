@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
-import { getProjectBySlug } from '@/lib/db';
+import { getProjectBySlugIncludingPaused } from '@/lib/db';
 import { createBookingEvent, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendApprovalConfirmation,
@@ -50,7 +50,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const project = await getProjectBySlug(payload.projectSlug);
+  // Paused-inclusive, and no slug match to check: the slug comes from the
+  // signed pending token itself. This is the step that actually creates the
+  // event when Telegram is configured, so an active-only lookup here undid the
+  // paused tolerance the page, availability and /api/book grant — Chii would
+  // tap Approve and get "Project not found", leaving a paying client with a
+  // request that is never answered and an old event never cancelled. For a seed
+  // slug it was worse: it fell back to SEED_PROJECTS and would have created the
+  // invite on the default calendar with seed copy instead of the real settings.
+  const project = await getProjectBySlugIncludingPaused(payload.projectSlug);
   if (!project) {
     return page('❓', 'Project not found', 'Could not find the project for this booking.');
   }

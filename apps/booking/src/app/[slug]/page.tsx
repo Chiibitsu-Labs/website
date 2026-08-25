@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/config/projects';
-import { getProjectBySlug, getProjectBySlugIncludingPaused } from '@/lib/db';
+import { resolveProjectForSlug, rescheduleTokenMatchesProject } from '@/lib/db';
 import { BookingFlow } from '@/components/BookingFlow';
 import { TimezoneChip } from '@/components/TimezoneChip';
 import { LocalTimeLabel } from '@/components/LocalTimeLabel';
@@ -17,8 +17,23 @@ interface Props {
   searchParams: { reschedule?: string | string[] };
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const project = await getProjectBySlug(params.slug);
+/**
+ * The verified reschedule token from the URL, but only when it names this
+ * project — a token for a different session is not a reschedule of this one.
+ */
+function rescheduleFor(slug: string, searchParams: Props['searchParams']) {
+  const param = typeof searchParams.reschedule === 'string' ? searchParams.reschedule : undefined;
+  const verified = param ? verifyRescheduleToken(param) : null;
+  return rescheduleTokenMatchesProject(verified, slug) ? verified : null;
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  // Resolve exactly as the page does, or a paused project's reschedule page
+  // would render fully but with no title.
+  const project = await resolveProjectForSlug(
+    params.slug,
+    rescheduleFor(params.slug, searchParams),
+  );
   if (!project) return {};
   return {
     title: `Book: ${project.name}`,
@@ -29,14 +44,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BookPage({ params, searchParams }: Props) {
   // Handle reschedule mode
   const rescheduleParam = typeof searchParams.reschedule === 'string' ? searchParams.reschedule : undefined;
-  const payload = rescheduleParam ? verifyRescheduleToken(rescheduleParam) : null;
+  // A token for a DIFFERENT project is not a reschedule of this one: honouring
+  // it would prefill this page with another booking's details and let /api/book
+  // cancel that unrelated event.
+  const payload = rescheduleFor(params.slug, searchParams);
 
   // A verified token proves this person is already booked on the project, so
   // pausing it must not 404 their reschedule link — or, for a seed slug, hand
   // them the hard-coded seed config and rebook them on the wrong calendar.
-  const project = payload
-    ? await getProjectBySlugIncludingPaused(params.slug)
-    : await getProjectBySlug(params.slug);
+  // The token must name THIS project; resolveProjectForSlug enforces that.
+  const project = await resolveProjectForSlug(params.slug, payload);
   if (!project) notFound();
 
   let rescheduleInfo: {

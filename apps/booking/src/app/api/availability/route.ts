@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectBySlug, getProjectBySlugIncludingPaused } from '@/lib/db';
+import { resolveProjectForSlug } from '@/lib/db';
 import { getAvailableSlots } from '@/lib/google-calendar';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { parseISO, isValid, isBefore, startOfDay, addWeeks } from 'date-fns';
@@ -18,14 +18,8 @@ export async function GET(req: NextRequest) {
   // project; this endpoint feeds the picker between them, so leaving it
   // active-only made the reschedule page load and then show "No slots
   // available" on every date — visibly working, actually a dead end.
-  // The token names its own project, so require the match: otherwise any live
-  // token would expose availability for any paused project.
   const payload = rescheduleToken ? verifyRescheduleToken(rescheduleToken) : null;
-  const isReschedulingThisProject = payload?.projectSlug === slug;
-
-  const project = isReschedulingThisProject
-    ? await getProjectBySlugIncludingPaused(slug)
-    : await getProjectBySlug(slug);
+  const project = await resolveProjectForSlug(slug, payload);
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
