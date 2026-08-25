@@ -208,6 +208,18 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
     (f) => f.id === 'booker_timezone',
   );
 
+  // Same collision, other reserved key: our button group and a project field
+  // called `location_choice` would write one customFields entry (and one
+  // formErrors entry), so whichever the booker touched last silently erases the
+  // other. The server already treats a project-defined field as authoritative
+  // (see the locationIsReserved check in /api/book) — match it and render only
+  // the project's own control.
+  const projectDefinesLocationField = project.customFields.some(
+    (f) => f.id === 'location_choice',
+  );
+  const offerLocationChoice =
+    project.locationType === 'either' && !projectDefinesLocationField;
+
   const today = startOfDay(new Date());
   const maxDate = addWeeks(today, project.bookingWindowWeeks);
 
@@ -261,7 +273,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         errors[field.id] = `${field.label} is required`;
       }
     }
-    if (project.locationType === 'either' && !form.customFields.location_choice) {
+    if (offerLocationChoice && !form.customFields.location_choice) {
       errors.location_choice = 'Please choose how you would like to meet';
     }
     setFormErrors(errors);
@@ -576,7 +588,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           )}
 
           {/* Booker picks the delivery mode when the project offers both */}
-          {project.locationType === 'either' && (
+          {offerLocationChoice && (
             <Field label="How would you like to meet?" error={formErrors.location_choice} required>
               <div className="grid grid-cols-2 gap-2">
                 {LOCATION_OPTIONS.map((opt) => (

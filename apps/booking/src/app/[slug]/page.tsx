@@ -41,6 +41,10 @@ export default async function BookPage({ params, searchParams }: Props) {
   } | null = null;
   let rescheduleWindowClosed = false;
 
+  const keepStoredLocation =
+    project.locationType === 'either' ||
+    project.customFields.some((f) => f.id === 'location_choice');
+
   if (rescheduleParam) {
     const payload = verifyRescheduleToken(rescheduleParam);
     if (payload) {
@@ -59,14 +63,16 @@ export default async function BookPage({ params, searchParams }: Props) {
             company: payload.bookerCompany,
             // Drop a stale location once the project stops offering both, or
             // the picker is hidden and the old value silently carries over.
-            customFields:
-              project.locationType === 'either'
-                ? payload.customFields
-                : Object.fromEntries(
-                    Object.entries(payload.customFields).filter(
-                      ([k]) => k !== 'location_choice',
-                    ),
+            // Only when the key is ours: if the project defines its own
+            // `location_choice` field, that is the booker's own answer to a
+            // visible question, and dropping it would blank their form.
+            customFields: keepStoredLocation
+              ? payload.customFields
+              : Object.fromEntries(
+                  Object.entries(payload.customFields).filter(
+                    ([k]) => k !== 'location_choice',
                   ),
+                ),
           },
         };
       }
