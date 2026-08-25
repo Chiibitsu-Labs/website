@@ -7,7 +7,7 @@ import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 import { getAllProjectsAdmin } from '@/lib/db';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { errorMessage } from '@/lib/utils';
-import { LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
+import { ADMIN_LOCATION_KEY, LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -130,7 +130,10 @@ export async function POST(req: NextRequest) {
     }
 
     const customFields: Record<string, string> = {};
-    if (locationChoice) customFields.location_choice = locationChoice;
+    // Under the ADMIN key, not the booker's: a reschedule carries this forward
+    // on any project, whereas a booker's answer is only meaningful while the
+    // project still offers the choice.
+    if (locationChoice) customFields[ADMIN_LOCATION_KEY] = locationChoice;
     if (bookerTimezone) customFields.booker_timezone = bookerTimezone;
     // Reserved key, filtered out of every client-facing surface.
     // Google caps extendedProperties.private values, and every custom field

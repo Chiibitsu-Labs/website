@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/config/projects';
 import { resolveProjectForSlug, rescheduleTokenMatchesProject } from '@/lib/db';
+import { ADMIN_LOCATION_KEY, BOOKER_LOCATION_KEY } from '@/lib/location';
 import { BookingFlow } from '@/components/BookingFlow';
 import { TimezoneChip } from '@/components/TimezoneChip';
 import { LocalTimeLabel } from '@/components/LocalTimeLabel';
@@ -65,7 +66,14 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   const keepStoredLocation =
     project.locationType === 'either' ||
-    project.customFields.some((f) => f.id === 'location_choice');
+    project.customFields.some((f) => f.id === BOOKER_LOCATION_KEY);
+
+  /** Keys the form must not carry back: not questions, and set server-side. */
+  const dropFromPrefill = (key: string) =>
+    // The admin's override is restored from the signed token by /api/book, so
+    // round-tripping it through the client would add nothing but a way to
+    // tamper with it.
+    key === ADMIN_LOCATION_KEY || (!keepStoredLocation && key === BOOKER_LOCATION_KEY);
 
   if (rescheduleParam) {
     if (payload) {
@@ -87,16 +95,12 @@ export default async function BookPage({ params, searchParams }: Props) {
             company: payload.bookerCompany,
             // Drop a stale location once the project stops offering both, or
             // the picker is hidden and the old value silently carries over.
-            // Only when the key is ours: if the project defines its own
-            // `location_choice` field, that is the booker's own answer to a
-            // visible question, and dropping it would blank their form.
-            customFields: keepStoredLocation
-              ? payload.customFields
-              : Object.fromEntries(
-                  Object.entries(payload.customFields).filter(
-                    ([k]) => k !== 'location_choice',
-                  ),
-                ),
+            // The booker key survives when the project defines its own field of
+            // that id — there it is their answer to a visible question, and
+            // dropping it would blank their form.
+            customFields: Object.fromEntries(
+              Object.entries(payload.customFields).filter(([k]) => !dropFromPrefill(k)),
+            ),
           },
         };
       }

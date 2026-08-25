@@ -9,7 +9,12 @@ import {
 import { createPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { sendApprovalRequest, hasTelegram } from '@/lib/telegram';
-import { LOCATION_CHOICES, isLocationChoice } from '@/lib/location';
+import {
+  ADMIN_LOCATION_KEY,
+  BOOKER_LOCATION_KEY,
+  LOCATION_CHOICES,
+  isLocationChoice,
+} from '@/lib/location';
 import { format, addDays, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -72,7 +77,7 @@ export async function POST(req: NextRequest) {
     // would let the same input land as "format to be confirmed" via one path
     // and be rejected by the other.
     const projectFieldIds = project.customFields.map((f) => f.id);
-    const locationIsReserved = !projectFieldIds.includes('location_choice');
+    const locationIsReserved = !projectFieldIds.includes(BOOKER_LOCATION_KEY);
 
     if (locationIsReserved && customFields.location_choice && !isLocationChoice(customFields.location_choice)) {
       return NextResponse.json(
@@ -89,26 +94,31 @@ export async function POST(req: NextRequest) {
     }
 
     /**
-     * `location_choice` decides client-facing copy ("we'll send the joining
-     * link" vs "we'll confirm the venue"), and describeLocation honours it on
-     * ANY project so the admin can book one online client against a
-     * face-to-face project. That makes provenance matter: the value is only
-     * trustworthy when WE recorded it.
+     * The location decides client-facing copy ("we'll send the joining link"
+     * vs "we'll confirm the venue"), so provenance matters: a value is only
+     * trustworthy when WE recorded it, and what it means depends on who did.
      *
-     * Only two sources qualify. On an 'either' project the booker was actually
-     * asked, so their submission is the answer. Otherwise the form never
-     * offered the choice, so anything posted under that key is spoofed or a
-     * stale prefill — but the reschedule token is HMAC-signed by us, so a
-     * choice carried inside it is our own earlier decision and must survive the
-     * reschedule rather than silently reverting to the project default.
+     * The admin's override is never client input. Drop whatever was posted
+     * under that key and restore it from the reschedule token, which is
+     * HMAC-signed by us — so an admin's deliberate override (an online client
+     * on a face-to-face project) survives the client rescheduling.
+     *
+     * The booker's own answer is accepted only on an 'either' project, where
+     * the form actually asked. Elsewhere the picker never rendered, so a value
+     * under that key is spoofed or a stale prefill. It is deliberately NOT
+     * carried over from the token: an answer given while the project offered
+     * both modes is stale once it is fixed to one, and reviving it would
+     * promise a face-to-face session on an online-only project.
      */
-    if (locationIsReserved && project.locationType !== 'either') {
-      const carriedOver = reschedulePayload?.customFields?.location_choice;
-      if (isLocationChoice(carriedOver)) {
-        customFields.location_choice = carriedOver;
-      } else {
-        delete customFields.location_choice;
+    const adminOverride = reschedulePayload?.customFields?.[ADMIN_LOCATION_KEY];
+    if (!projectFieldIds.includes(ADMIN_LOCATION_KEY)) {
+      delete customFields[ADMIN_LOCATION_KEY];
+      if (isLocationChoice(adminOverride)) {
+        customFields[ADMIN_LOCATION_KEY] = adminOverride;
       }
+    }
+    if (locationIsReserved && project.locationType !== 'either') {
+      delete customFields[BOOKER_LOCATION_KEY];
     }
 
     // Verify slot exists and isn't blocked by an existing Google Calendar event

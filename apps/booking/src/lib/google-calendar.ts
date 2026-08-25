@@ -4,7 +4,12 @@ import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
 import { formatDuration, prettifyFieldKey } from './utils';
 import { friendlyZoneName } from './timezone';
-import { isInPersonChoice, isLocationChoice } from './location';
+import {
+  ADMIN_LOCATION_KEY,
+  BOOKER_LOCATION_KEY,
+  isInPersonChoice,
+  isLocationChoice,
+} from './location';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -136,11 +141,16 @@ export interface BookingDetails {
 
 /**
  * Reserved custom-field keys that must never be rendered to the client.
- * `location_choice` is already stated in the location line; `booker_timezone`
+ * The two location keys are already stated in the location line; `booker_timezone`
  * is plumbing; `admin_note` is written by the admin for their own records and
  * the booker is an attendee on the invite, so it would otherwise reach them.
  */
-export const CLIENT_HIDDEN_FIELDS = new Set(['location_choice', 'booker_timezone', 'admin_note']);
+export const CLIENT_HIDDEN_FIELDS = new Set([
+  BOOKER_LOCATION_KEY,
+  ADMIN_LOCATION_KEY,
+  'booker_timezone',
+  'admin_note',
+]);
 
 /**
  * Stricter than hiding: these must never reach the client by ANY route.
@@ -187,12 +197,27 @@ export function stripAdminOnlyFields(
 export function describeLocation(
   booking: Pick<BookingDetails, 'customFields' | 'locationType' | 'projectFieldIds'>,
 ): string {
-  // A location recorded ON THIS BOOKING wins over the project default: an
-  // admin booking one online client against a face-to-face project is exactly
-  // the case this exists for. Ignored only when the id belongs to a project's
-  // own custom field, where the value is the booker's answer, not a location.
-  const isOurs = !(booking.projectFieldIds ?? []).includes('location_choice');
-  const raw = isOurs ? booking.customFields.location_choice : undefined;
+  // Two sources, deliberately not interchangeable.
+  //
+  // The admin's override applies to ANY project — booking one online client
+  // against a face-to-face project is the case it exists for — so it wins.
+  //
+  // The booker's own answer counts only while the project still offers the
+  // choice. Once it is fixed to online, a face-to-face answer given months
+  // earlier is stale data, not an instruction, and honouring it would promise
+  // a venue for a session that has none.
+  //
+  // Either is ignored when the id belongs to a project's own custom field,
+  // where the value is the booker's answer to that question, not a location.
+  const defined = new Set(booking.projectFieldIds ?? []);
+  const override = defined.has(ADMIN_LOCATION_KEY)
+    ? undefined
+    : booking.customFields[ADMIN_LOCATION_KEY];
+  const booker =
+    defined.has(BOOKER_LOCATION_KEY) || booking.locationType !== 'either'
+      ? undefined
+      : booking.customFields[BOOKER_LOCATION_KEY];
+  const raw = isLocationChoice(override) ? override : booker;
   const chosen = isLocationChoice(raw) ? raw : undefined;
   if (!chosen && booking.locationType === 'either') {
     return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
@@ -452,11 +477,21 @@ export async function findConflicts(
       maxResults: 10,
     });
     return (res.data.items ?? [])
-      .filter((e) => e.start?.dateTime && e.transparency !== 'transparent')
+      .filter((e) => e.transparency !== 'transparent')
       .map((e) => {
-        const zoned = toZonedTime(new Date(e.start!.dateTime!), TIMEZONE);
-        return `${e.summary ?? 'Untitled'} (${format(zoned, 'h:mm a')})`;
-      });
+        const label = e.summary ?? 'Untitled';
+        // All-day events (a vacation or out-of-office block) carry start.date,
+        // not start.dateTime. Filtering on dateTime dropped them even though
+        // events.list had returned them as overlapping the window — so the
+        // admin got no conflict warning for booking straight into leave.
+        if (e.start?.dateTime) {
+          const zoned = toZonedTime(new Date(e.start.dateTime), TIMEZONE);
+          return `${label} (${format(zoned, 'h:mm a')})`;
+        }
+        if (e.start?.date) return `${label} (all day)`;
+        return null;
+      })
+      .filter((l): l is string => l !== null);
   } catch (err) {
     // A freebusy failure must not block a booking the admin has decided on.
     console.error('findConflicts failed:', err);
