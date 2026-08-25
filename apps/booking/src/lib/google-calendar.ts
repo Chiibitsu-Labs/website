@@ -269,7 +269,11 @@ export async function createBookingEvent(
         dateTime: booking.endISO,
         timeZone: TIMEZONE,
       },
-      attendees: [{ email: booking.bookerEmail, displayName: booking.bookerName }],
+      // sendUpdates:'none' only suppresses Google's mail; an attendee still
+      // gets the event on their own calendar. "Don't notify" must mean neither.
+      attendees: notifyAttendee
+        ? [{ email: booking.bookerEmail, displayName: booking.bookerName }]
+        : [],
       extendedProperties: {
         private: {
           chiibitsuBooking: 'true',

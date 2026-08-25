@@ -82,8 +82,16 @@ export async function POST(req: NextRequest) {
     const [hourStr, minuteStr] = String(time).split(':');
     const hour = Number(hourStr);
     const minute = Number(minuteStr ?? 0);
-    if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
-      return NextResponse.json({ error: 'Invalid time. Use HH:MM.' }, { status: 400 });
+    // Range-check explicitly: setHours(25, …) silently rolls into the next day,
+    // so a typo would book a different date than the one on screen.
+    if (
+      !Number.isInteger(hour) || hour < 0 || hour > 23 ||
+      !Number.isInteger(minute) || minute < 0 || minute > 59
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid time. Use HH:MM between 00:00 and 23:59.' },
+        { status: 400 },
+      );
     }
 
     // Interpret the admin's date/time as host-timezone wall clock, then store
@@ -97,6 +105,16 @@ export async function POST(req: NextRequest) {
     const startUTC = fromZonedTime(wallClock, TIMEZONE);
     const minutes = Number(durationMinutes) > 0 ? Number(durationMinutes) : project.durationMinutes;
     const endUTC = addMinutes(startUTC, minutes);
+
+    // A mistyped past date would still create a real invite and email, but
+    // getUpcomingBookings lists from now onwards — so it could never be found
+    // or cancelled from the panel afterwards.
+    if (startUTC.getTime() < Date.now()) {
+      return NextResponse.json(
+        { error: 'That start time is in the past. Bookings must be in the future.' },
+        { status: 400 },
+      );
+    }
 
     const customFields: Record<string, string> = {};
     if (locationChoice) customFields.location_choice = locationChoice;

@@ -11,7 +11,10 @@ export function hasTelegram(): boolean {
  * swallowed and the notification is simply lost.
  */
 export function escapeMarkdown(text: string): string {
-  return text.replace(/([_*[\]`])/g, '\\$1');
+  // Backslash is in the class so it is escaped in the same pass (no double
+  // processing). ']' is deliberately absent: legacy Markdown cannot escape it,
+  // and emitting a backslash before it would show up literally in the message.
+  return text.replace(/([\\_*[`])/g, '\\$1');
 }
 
 export async function sendSimpleMessage(text: string) {

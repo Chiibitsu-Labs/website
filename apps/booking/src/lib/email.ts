@@ -238,6 +238,8 @@ export async function sendApprovalConfirmation(
   });
 }
 
+// Deliberately omits describeLocation(): this mail declines the booking, and a
+// "we'll send the joining link" line would read as a confirmation.
 export async function sendRejectionEmail(
   booking: BookingDetails,
   project: Project,
@@ -266,7 +268,6 @@ export async function sendRejectionEmail(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date requested</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
         ${bookerLocalTimeBlock(booking)}
-        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
       <p style="font-size:14px;color:#374151;">Unfortunately we're unable to confirm this booking. You're welcome to pick a different date — we'd love to find a time that works!</p>
