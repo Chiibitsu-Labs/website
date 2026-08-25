@@ -526,6 +526,9 @@ function BookingRow({
         },
         body: JSON.stringify({
           eventId: booking.eventId,
+          // Bookings can live on a project's own calendar; without this the
+          // cancel falls back to the default calendar and 404s.
+          calendarId: booking.calendarId,
           bookerName: booking.bookerName,
           projectName: booking.projectName,
           dateLabel: booking.dateLabel,

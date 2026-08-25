@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, type calendar_v3 } from 'googleapis';
 import { addMinutes, format, parseISO, startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Project, TimeSlotTemplate } from '@/config/projects';
@@ -153,6 +153,27 @@ export function stripAdminOnlyFields(
   );
 }
 
+/**
+ * One human sentence for where the session happens. The booker's own choice
+ * wins over the project default; an 'either' project with no recorded choice
+ * must not promise a joining link for what might be a face-to-face session.
+ * Shared so the invite and the emails cannot drift apart.
+ */
+export function describeLocation(
+  booking: Pick<BookingDetails, 'customFields' | 'locationType'>,
+): string {
+  const chosen = booking.customFields.location_choice;
+  if (!chosen && booking.locationType === 'either') {
+    return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
+  }
+  const isInPerson = chosen
+    ? chosen.toLowerCase().startsWith('face')
+    : booking.locationType === 'in_person';
+  return isInPerson
+    ? '📍 In person — we\'ll confirm the exact venue with you'
+    : '💻 Online — we\'ll send the joining link before we start';
+}
+
 // Warm, client-facing invite body. The booker is an attendee, so this is what
 // they read inside their calendar — keep it professional and reassuring.
 function buildEventDescription(booking: BookingDetails): string {
@@ -162,21 +183,7 @@ function buildEventDescription(booking: BookingDetails): string {
     differenceInMinutes(new Date(booking.endISO), new Date(booking.startISO)),
   );
 
-  // When the project offers both, the booker's own choice wins over the
-  // project-level default.
-  const chosenLocation = booking.customFields.location_choice;
-  const undecided = !chosenLocation && booking.locationType === 'either';
-  const isInPerson = chosenLocation
-    ? chosenLocation.toLowerCase().startsWith('face')
-    : booking.locationType === 'in_person';
-
-  // Never assert a format nobody agreed: an 'either' project with no recorded
-  // choice would otherwise promise a joining link for a face-to-face session.
-  const locationLine = undecided
-    ? '🗓 Format to be confirmed — we\'ll agree online or in person with you'
-    : isInPerson
-    ? '📍 In person — we\'ll confirm the exact venue with you'
-    : '💻 Online — we\'ll send the joining link before we start';
+  const locationLine = describeLocation(booking);
 
   const detailRows = [
     `Name: ${booking.bookerName}`,
@@ -291,6 +298,8 @@ export async function cancelBookingEvent(eventId: string, calendarId?: string): 
 
 export interface AdminBooking {
   eventId: string;
+  /** Which calendar the event lives on — cancelling needs it. */
+  calendarId: string;
   projectSlug: string;
   projectName: string;
   bookerName: string;
@@ -320,37 +329,39 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
     new Set([defaultCalId, ...projectList.map((p) => p.calendarId).filter(Boolean) as string[]]),
   );
 
+  type Listed = { calId: string; e: calendar_v3.Schema$Event };
   const results = await Promise.all(
-    calendarIds.map((calId) =>
-      calendar.events
-        .list({
+    calendarIds.map(async (calId): Promise<Listed[]> => {
+      try {
+        const r = await calendar.events.list({
           calendarId: calId,
           privateExtendedProperty: ['chiibitsuBooking=true'],
           timeMin: new Date().toISOString(),
           orderBy: 'startTime',
           singleEvents: true,
           maxResults: 100,
-        })
-        .then((r) => r.data.items ?? [])
-        .catch((err) => {
-          console.error(`getUpcomingBookings: calendar ${calId} failed:`, err);
-          return [];
-        }),
-    ),
+        });
+        return (r.data.items ?? []).map((e) => ({ calId, e }));
+      } catch (err) {
+        // One unreachable calendar must not empty the whole list.
+        console.error(`getUpcomingBookings: calendar ${calId} failed:`, err);
+        return [];
+      }
+    }),
   );
 
   // 'primary' and the account's explicit address are distinct strings but the
   // same calendar, so the same event can arrive twice.
   const seenIds = new Set<string>();
-  const events = results.flat().filter((e) => {
+  const events = results.flat().filter(({ e }) => {
     if (!e.id || seenIds.has(e.id)) return false;
     seenIds.add(e.id);
     return true;
   });
 
   return events
-    .filter((e) => e.start?.dateTime)
-    .map((e) => {
+    .filter(({ e }) => e.start?.dateTime)
+    .map(({ calId, e }) => {
       const props = e.extendedProperties?.private ?? {};
       const slug = props.projectSlug ?? '';
       const project = projectList.find((p) => p.slug === slug);
@@ -366,6 +377,7 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
 
       return {
         eventId: e.id ?? '',
+        calendarId: calId,
         projectSlug: slug,
         projectName: project?.name ?? slug,
         bookerName: props.bookerName ?? '',

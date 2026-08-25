@@ -1,3 +1,5 @@
+import { prettifyFieldKey } from './utils';
+
 export function hasTelegram(): boolean {
   return !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
@@ -72,12 +74,16 @@ export async function sendApprovalRequest({
   const approveUrl = `${baseUrl}/api/booking-approval?token=${encodeURIComponent(bookingToken)}&action=approve`;
   const rejectUrl = `${baseUrl}/api/booking-approval?token=${encodeURIComponent(bookingToken)}&action=reject`;
 
+  // Keys are prettified (so reserved ids like booker_timezone stop injecting a
+  // lone underscore) and every dynamic value is escaped: one unpaired Markdown
+  // character makes Telegram 400 the message, which would mean no approve /
+  // reject buttons at all while the booker has been told to expect a reply.
   const extraLines = [
-    bookerPhone ? `📱 ${bookerPhone}` : null,
-    bookerCompany ? `🏢 ${bookerCompany}` : null,
+    bookerPhone ? `📱 ${escapeMarkdown(bookerPhone)}` : null,
+    bookerCompany ? `🏢 ${escapeMarkdown(bookerCompany)}` : null,
     ...Object.entries(customFields)
       .filter(([, v]) => v)
-      .map(([k, v]) => `• ${k}: ${v}`),
+      .map(([k, v]) => `• ${escapeMarkdown(prettifyFieldKey(k))}: ${escapeMarkdown(v)}`),
   ]
     .filter(Boolean)
     .join('\n');
@@ -87,20 +93,20 @@ export async function sendApprovalRequest({
     : `⏳ *New booking — approval needed*`;
 
   const dateSection = isReschedule && originalDateLabel
-    ? `📅 *New date:* ${dateLabel}\n↩️ *Was:* ${originalDateLabel}`
-    : `📅 ${dateLabel}`;
+    ? `📅 *New date:* ${escapeMarkdown(dateLabel)}\n↩️ *Was:* ${escapeMarkdown(originalDateLabel)}`
+    : `📅 ${escapeMarkdown(dateLabel)}`;
 
   const text =
     `${header}\n\n` +
-    `📌 ${projectName}\n` +
+    `📌 ${escapeMarkdown(projectName)}\n` +
     `${dateSection}\n` +
-    `🕐 ${timeLabel} – ${endLabel}\n\n` +
-    `👤 ${bookerName}\n` +
-    `📧 ${bookerEmail}` +
+    `🕐 ${escapeMarkdown(timeLabel)} – ${escapeMarkdown(endLabel)}\n\n` +
+    `👤 ${escapeMarkdown(bookerName)}\n` +
+    `📧 ${escapeMarkdown(bookerEmail)}` +
     (extraLines ? `\n${extraLines}` : '') +
     `\n\n_Tap below to approve or reject._`;
 
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -115,4 +121,10 @@ export async function sendApprovalRequest({
       },
     }),
   });
+
+  // A 4xx resolves rather than throwing, so an unsendable approval message
+  // would otherwise vanish while the booker waits for a reply that never comes.
+  if (!res.ok) {
+    console.error('Telegram sendApprovalRequest rejected:', res.status, await res.text().catch(() => ''));
+  }
 }

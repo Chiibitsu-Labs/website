@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { CLIENT_HIDDEN_FIELDS, stripAdminOnlyFields, type BookingDetails } from './google-calendar';
+import { CLIENT_HIDDEN_FIELDS, describeLocation, stripAdminOnlyFields, type BookingDetails } from './google-calendar';
 import type { Project } from '@/config/projects';
 import { prettifyFieldKey } from './utils';
 import { createRescheduleToken } from './reschedule-token';
@@ -128,6 +128,7 @@ export async function sendBookingConfirmationToBooker(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
         ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
 
       <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#111827;">Your details</p>
@@ -179,6 +180,7 @@ export async function sendPendingBookingToBooker(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
         ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
       <p style="font-size:14px;color:#374151;">Your booking request has been received and is being reviewed by Chiibitsu Labs.</p>
@@ -223,6 +225,7 @@ export async function sendApprovalConfirmation(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
         ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your booking has been confirmed by Chiibitsu Labs.</p>
       <a href="${addToCalUrl}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
@@ -263,6 +266,7 @@ export async function sendRejectionEmail(
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date requested</strong><br>${from.date}</p>
         <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
         ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
       <p style="font-size:14px;color:#374151;">Unfortunately we're unable to confirm this booking. You're welcome to pick a different date — we'd love to find a time that works!</p>
