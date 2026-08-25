@@ -128,6 +128,9 @@ export interface BookingDetails {
   calendarEventTitleTemplate?: string;
   projectDescription?: string;
   locationType?: 'online' | 'in_person' | 'either';
+  /** The project's own custom-field ids, so a project-defined field is never
+   *  mistaken for one of our reserved keys and hidden from the client. */
+  projectFieldIds?: string[];
 }
 
 /**
@@ -137,6 +140,18 @@ export interface BookingDetails {
  * the booker is an attendee on the invite, so it would otherwise reach them.
  */
 export const CLIENT_HIDDEN_FIELDS = new Set(['location_choice', 'booker_timezone', 'admin_note']);
+
+/**
+ * The reserved keys that actually apply to THIS booking. A project may define a
+ * custom field whose id collides with one of ours; the booker's answer to it is
+ * real content and must not be suppressed as internal metadata.
+ */
+export function hiddenFieldsFor(projectFieldIds: string[] = []): Set<string> {
+  const defined = new Set(projectFieldIds);
+  return new Set(
+    Array.from(CLIENT_HIDDEN_FIELDS).filter((k) => !defined.has(k)),
+  );
+}
 
 /**
  * Stricter than hiding: these must never reach the client by ANY route.
@@ -196,7 +211,7 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
     booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
     ...Object.entries(booking.customFields)
-      .filter(([k, v]) => v && !CLIENT_HIDDEN_FIELDS.has(k))
+      .filter(([k, v]) => v && !hiddenFieldsFor(booking.projectFieldIds).has(k))
       .map(([k, v]) => `${prettifyFieldKey(k)}: ${v}`),
   ].filter(Boolean);
 

@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
     calendarEventTitleTemplate: project.calendarEventTitleTemplate,
     projectDescription: project.description,
     locationType: project.locationType,
+    projectFieldIds: project.customFields.map((f) => f.id),
   };
 
   if (action === 'reject') {

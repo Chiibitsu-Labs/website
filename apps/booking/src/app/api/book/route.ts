@@ -59,14 +59,17 @@ export async function POST(req: NextRequest) {
     // guarantee — and the admin route already enforces it, so accepting it here
     // would let the same input land as "format to be confirmed" via one path
     // and be rejected by the other.
-    if (customFields.location_choice && !isLocationChoice(customFields.location_choice)) {
+    const projectFieldIds = project.customFields.map((f) => f.id);
+    const locationIsReserved = !projectFieldIds.includes('location_choice');
+
+    if (locationIsReserved && customFields.location_choice && !isLocationChoice(customFields.location_choice)) {
       return NextResponse.json(
         { error: `Location must be one of: ${LOCATION_CHOICES.join(', ')}.` },
         { status: 400 },
       );
     }
 
-    if (project.locationType === 'either' && !customFields.location_choice) {
+    if (locationIsReserved && project.locationType === 'either' && !customFields.location_choice) {
       return NextResponse.json(
         { error: 'Please choose whether you would like to meet online or face to face.' },
         { status: 400 },
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
       calendarEventTitleTemplate: project.calendarEventTitleTemplate,
       projectDescription: project.description,
       locationType: project.locationType,
+      projectFieldIds,
     };
 
     // ── Pending approval via Telegram ─────────────────────────────────────────

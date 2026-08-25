@@ -150,6 +150,7 @@ export async function POST(req: NextRequest) {
       calendarEventTitleTemplate: project.calendarEventTitleTemplate,
       projectDescription: project.description,
       locationType: project.locationType,
+      projectFieldIds: project.customFields.map((f) => f.id),
     };
 
     // Ignoring the slot template is intended; silently double-booking is not.
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
     if (hasTelegram()) {
       await sendSimpleMessage(
         `✍️ *Booking added manually*\n${escapeMarkdown(project.name)} · ${escapeMarkdown(String(name))}\n${date} ${time} (${minutes} min)` +
-          (notes ? `\n📝 ${escapeMarkdown(String(notes))}` : '') +
+          (customFields.admin_note ? `\n📝 ${escapeMarkdown(customFields.admin_note)}` : '') +
           (sendEmail ? '' : '\n(client not notified)'),
       ).catch(() => {});
     }

@@ -402,7 +402,15 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         </div>
 
         <p className="mt-4 text-xs text-gray-400 text-center">
-          Times shown in {zoneLabelAt()}
+          {/* The day cells are HOST dates, so promising "your timezone" here
+              contradicts the slot rows on the next step. */}
+          {viewerZone && zonesDiffer(viewerZone, HOST_TIMEZONE, selectedDate ?? currentMonth) ? (
+            <>
+              Dates are {friendlyZoneName(HOST_TIMEZONE)}; times will show in {zoneLabelAt()}
+            </>
+          ) : (
+            <>Times shown in {zoneLabelAt()}</>
+          )}
         </p>
       </div>
     );

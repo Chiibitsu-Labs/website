@@ -318,7 +318,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
                     {formatLongDateInZone(previewStart.toISOString(), form.bookerTimezone)},{' '}
                     {formatTimeInZone(previewStart.toISOString(), form.bookerTimezone)} –{' '}
                     {formatTimeInZone(previewEnd.toISOString(), form.bookerTimezone)}{' '}
-                    <span className="text-gray-500">({zoneDescription(form.bookerTimezone, previewStart ?? undefined)})</span>
+                    <span className="text-gray-500">{zoneDescription(form.bookerTimezone, previewStart ?? undefined)}</span>
                   </p>
                 )}
               </div>
