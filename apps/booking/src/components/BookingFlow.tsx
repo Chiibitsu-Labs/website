@@ -202,6 +202,12 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
     return mine === host ? null : mine;
   }
 
+  // If the project defines its own field with the reserved id, the booker's
+  // answer wins and we skip injecting the browser timezone.
+  const projectDefinesTimezoneField = project.customFields.some(
+    (f) => f.id === 'booker_timezone',
+  );
+
   const today = startOfDay(new Date());
   const maxDate = addWeeks(today, project.bookingWindowWeeks);
 
@@ -284,7 +290,12 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           customFields: {
             ...form.customFields,
             // Lets the confirmation email echo their local time back to them.
-            ...(viewerZone ? { booker_timezone: viewerZone } : {}),
+            // Never overwrite a project's own field of the same name — the
+            // booker's answer to it would be silently replaced and then hidden
+            // from their confirmation as internal metadata.
+            ...(viewerZone && !projectDefinesTimezoneField
+              ? { booker_timezone: viewerZone }
+              : {}),
           },
           ...(rescheduleToken ? { rescheduleToken } : {}),
         }),

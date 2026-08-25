@@ -163,7 +163,11 @@ export function stripAdminOnlyFields(
 export function describeLocation(
   booking: Pick<BookingDetails, 'customFields' | 'locationType'>,
 ): string {
-  const chosen = booking.customFields.location_choice;
+  // Only consult the booker's choice while the project still offers both. A
+  // project switched to online-only must not keep emitting "in person" for an
+  // old booking whose stored choice says so.
+  const chosen =
+    booking.locationType === 'either' ? booking.customFields.location_choice : undefined;
   if (!chosen && booking.locationType === 'either') {
     return '🗓 Format to be confirmed — we\'ll agree online or in person with you';
   }
