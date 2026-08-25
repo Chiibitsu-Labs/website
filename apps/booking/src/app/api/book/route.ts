@@ -113,7 +113,12 @@ export async function POST(req: NextRequest) {
     const adminOverride = reschedulePayload?.customFields?.[ADMIN_LOCATION_KEY];
     if (!projectFieldIds.includes(ADMIN_LOCATION_KEY)) {
       delete customFields[ADMIN_LOCATION_KEY];
-      if (isLocationChoice(adminOverride)) {
+      // Restored only where the booker was NOT asked. On an 'either' project
+      // the form just required them to choose, and an override carried forward
+      // would overrule the answer they gave seconds ago — and since each new
+      // token re-carries it, no later reschedule could escape either, leaving
+      // the picker permanently cosmetic for that booking.
+      if (project.locationType !== 'either' && isLocationChoice(adminOverride)) {
         customFields[ADMIN_LOCATION_KEY] = adminOverride;
       }
     }
