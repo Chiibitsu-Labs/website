@@ -50,6 +50,9 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   const [projects, setProjects] = useState<AdminProject[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Set when the server reports an overlapping event; lets the admin proceed
+  // deliberately rather than being blocked or silently double-booking.
+  const [conflict, setConflict] = useState(false);
 
   const [form, setForm] = useState({
     slug: '',
@@ -130,7 +133,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
     }
   })();
 
-  async function handleSave() {
+  async function handleSave(allowConflict = false) {
     if (!form.slug || !form.name || !form.email || !form.date || !form.time) {
       setError('Project, name, email, date and time are all required.');
       return;
@@ -141,6 +144,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
     }
     setSaving(true);
     setError('');
+    setConflict(false);
 
     try {
       const res = await fetch('/api/admin/bookings', {
@@ -150,11 +154,12 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
           'x-admin-email': adminEmail,
           'x-admin-password': adminPassword,
         },
-        body: JSON.stringify({ ...form, durationMinutes: minutes }),
+        body: JSON.stringify({ ...form, durationMinutes: minutes, allowConflict }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? `Failed to create booking (${res.status})`);
+        setConflict(res.status === 409 && !!data.conflict);
         setSaving(false);
         return;
       }
@@ -262,7 +267,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
               </Field>
             )}
 
-            <Field label="Notes" hint="shown in the invite details">
+            <Field label="Internal note" hint="for your records — the client never sees this">
               <textarea
                 value={form.notes}
                 onChange={(e) => setField('notes', e.target.value)}
@@ -301,19 +306,28 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
                 onChange={(e) => setField('sendEmail', e.target.checked)}
                 className="rounded"
               />
-              Send the client a confirmation email
+              Notify the client — confirmation email and calendar invite
             </label>
 
             {error && (
               <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-3 text-sm text-red-300">
                 {error}
+                {conflict && (
+                  <button
+                    type="button"
+                    onClick={() => handleSave(true)}
+                    className="mt-2 block underline font-semibold text-red-200 hover:text-white"
+                  >
+                    Book it anyway
+                  </button>
+                )}
               </div>
             )}
           </div>
 
           <div className="flex gap-3 px-6 py-4 border-t border-gray-800">
             <button
-              onClick={handleSave}
+              onClick={() => handleSave(false)}
               disabled={saving}
               className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition"
             >

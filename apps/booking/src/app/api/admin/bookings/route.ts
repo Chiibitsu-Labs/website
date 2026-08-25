@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addMinutes } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
-import { createBookingEvent, getUpcomingBookings } from '@/lib/google-calendar';
+import { createBookingEvent, findConflicts, getUpcomingBookings } from '@/lib/google-calendar';
 import { sendBookingConfirmationToBooker } from '@/lib/email';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
 import { getAllProjectsAdmin } from '@/lib/db';
@@ -51,8 +51,9 @@ export async function POST(req: NextRequest) {
       durationMinutes,
       locationChoice, // "Online" | "Face to face" — optional override
       bookerTimezone, // IANA id, so the confirmation email shows their local time
-      notes = '',
+      notes = '',     // internal: never rendered to the client
       sendEmail = true,
+      allowConflict = false,
     } = body;
 
     if (!slug || !name || !email || !date || !time) {
@@ -100,7 +101,8 @@ export async function POST(req: NextRequest) {
     const customFields: Record<string, string> = {};
     if (locationChoice) customFields.location_choice = locationChoice;
     if (bookerTimezone) customFields.booker_timezone = bookerTimezone;
-    if (notes) customFields.notes = notes;
+    // Reserved key, filtered out of every client-facing surface.
+    if (notes) customFields.admin_note = notes;
 
     const booking = {
       projectName: project.name,
@@ -118,7 +120,28 @@ export async function POST(req: NextRequest) {
       locationType: project.locationType,
     };
 
-    const { eventId, eventLink } = await createBookingEvent(booking, project.calendarId);
+    // Ignoring the slot template is intended; silently double-booking is not.
+    if (!allowConflict) {
+      const conflicts = await findConflicts(
+        booking.startISO,
+        booking.endISO,
+        project.calendarId,
+      );
+      if (conflicts.length > 0) {
+        return NextResponse.json(
+          {
+            error: `That window already has: ${conflicts.join(', ')}.`,
+            conflict: true,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    const { eventId, eventLink } = await createBookingEvent(booking, project.calendarId, {
+      // Google sends the attendee its own invite; "don't notify" must cover it.
+      notifyAttendee: sendEmail,
+    });
 
     if (sendEmail) {
       await sendBookingConfirmationToBooker(booking, project, eventId, project.calendarId).catch(
@@ -128,7 +151,9 @@ export async function POST(req: NextRequest) {
 
     if (hasTelegram()) {
       await sendSimpleMessage(
-        `✍️ *Booking added manually*\n${project.name} · ${name}\n${date} ${time} (${minutes} min)`,
+        `✍️ *Booking added manually*\n${project.name} · ${name}\n${date} ${time} (${minutes} min)` +
+          (notes ? `\n📝 ${notes}` : '') +
+          (sendEmail ? '' : '\n(client not notified)'),
       ).catch(() => {});
     }
 

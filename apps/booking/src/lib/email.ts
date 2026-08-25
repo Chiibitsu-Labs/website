@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import type { BookingDetails } from './google-calendar';
+import { CLIENT_HIDDEN_FIELDS, type BookingDetails } from './google-calendar';
 import type { Project } from '@/config/projects';
 import { prettifyFieldKey } from './utils';
 import { createRescheduleToken } from './reschedule-token';
@@ -100,8 +100,9 @@ export async function sendBookingConfirmationToBooker(
   const to = formatDateTime(booking.endISO);
 
   const customFieldsHtml = Object.entries(booking.customFields)
-    // booker_timezone is already surfaced as the "Your local time" block.
-    .filter(([k, v]) => v && k !== 'booker_timezone')
+    // booker_timezone is surfaced as the "Your local time" block; admin_note
+    // is internal. Neither belongs in the client's copy.
+    .filter(([k, v]) => v && !CLIENT_HIDDEN_FIELDS.has(k))
     .map(([k, v]) => `<tr><td style="padding:4px 8px;color:#6b7280;font-size:14px;">${prettifyFieldKey(k)}</td><td style="padding:4px 8px;font-size:14px;">${v}</td></tr>`)
     .join('');
 

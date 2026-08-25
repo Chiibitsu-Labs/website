@@ -129,6 +129,14 @@ export interface BookingDetails {
   locationType?: 'online' | 'in_person' | 'either';
 }
 
+/**
+ * Reserved custom-field keys that must never be rendered to the client.
+ * `location_choice` is already stated in the location line; `booker_timezone`
+ * is plumbing; `admin_note` is written by the admin for their own records and
+ * the booker is an attendee on the invite, so it would otherwise reach them.
+ */
+export const CLIENT_HIDDEN_FIELDS = new Set(['location_choice', 'booker_timezone', 'admin_note']);
+
 // Warm, client-facing invite body. The booker is an attendee, so this is what
 // they read inside their calendar — keep it professional and reassuring.
 function buildEventDescription(booking: BookingDetails): string {
@@ -160,8 +168,7 @@ function buildEventDescription(booking: BookingDetails): string {
     booking.bookerPhone ? `Phone: ${booking.bookerPhone}` : null,
     booking.bookerCompany ? `Company: ${booking.bookerCompany}` : null,
     ...Object.entries(booking.customFields)
-      // location_choice is already stated in the location line above.
-      .filter(([k, v]) => v && k !== 'location_choice')
+      .filter(([k, v]) => v && !CLIENT_HIDDEN_FIELDS.has(k))
       .map(([k, v]) => `${prettifyFieldKey(k)}: ${v}`),
   ].filter(Boolean);
 
@@ -205,7 +212,11 @@ function renderEventTitle(
 export async function createBookingEvent(
   booking: BookingDetails,
   calendarId?: string,
+  // Google emails the attendee its own invite independently of our Resend mail,
+  // so suppressing "notify the client" has to reach this call too.
+  opts: { notifyAttendee?: boolean } = {},
 ): Promise<{ eventId: string; eventLink: string }> {
+  const notifyAttendee = opts.notifyAttendee ?? true;
   const calendar = getCalendarClient();
   const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
@@ -223,7 +234,7 @@ export async function createBookingEvent(
 
   const event = await calendar.events.insert({
     calendarId: calId,
-    sendUpdates: 'all',
+    sendUpdates: notifyAttendee ? 'all' : 'none',
     requestBody: {
       summary: eventSummary,
       description: buildEventDescription(booking),
@@ -279,20 +290,37 @@ export interface AdminBooking {
 
 export async function getUpcomingBookings(): Promise<AdminBooking[]> {
   const calendar = getCalendarClient();
-  const calId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  const defaultCalId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
-  const res = await calendar.events.list({
-    calendarId: calId,
-    privateExtendedProperty: ['chiibitsuBooking=true'],
-    timeMin: new Date().toISOString(),
-    orderBy: 'startTime',
-    singleEvents: true,
-    maxResults: 100,
-  });
-
-  const events = res.data.items ?? [];
   const { getProjects } = await import('@/lib/db');
   const projectList = await getProjects();
+
+  // Bookings are created on the project's own calendar when it has one, so
+  // listing only the default calendar would hide them from this list entirely.
+  const calendarIds = Array.from(
+    new Set([defaultCalId, ...projectList.map((p) => p.calendarId).filter(Boolean) as string[]]),
+  );
+
+  const results = await Promise.all(
+    calendarIds.map((calId) =>
+      calendar.events
+        .list({
+          calendarId: calId,
+          privateExtendedProperty: ['chiibitsuBooking=true'],
+          timeMin: new Date().toISOString(),
+          orderBy: 'startTime',
+          singleEvents: true,
+          maxResults: 100,
+        })
+        .then((r) => r.data.items ?? [])
+        .catch((err) => {
+          console.error(`getUpcomingBookings: calendar ${calId} failed:`, err);
+          return [];
+        }),
+    ),
+  );
+
+  const events = results.flat();
 
   return events
     .filter((e) => e.start?.dateTime)
@@ -324,5 +352,40 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
         timeLabel: format(zonedStart, 'h:mm a'),
         customFields,
       };
+    })
+    // Merged from several calendars, so each list's own ordering no longer holds.
+    .sort((a, b) => a.startISO.localeCompare(b.startISO));
+}
+
+/**
+ * Existing events overlapping a window, on the calendar a booking would land on.
+ * The manual admin path intentionally ignores slot templates, but silently
+ * double-booking is a different thing from ignoring a template.
+ */
+export async function findConflicts(
+  startISO: string,
+  endISO: string,
+  calendarId?: string,
+): Promise<string[]> {
+  const calendar = getCalendarClient();
+  const calId = calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? 'primary';
+  try {
+    const res = await calendar.events.list({
+      calendarId: calId,
+      timeMin: startISO,
+      timeMax: endISO,
+      singleEvents: true,
+      maxResults: 10,
     });
+    return (res.data.items ?? [])
+      .filter((e) => e.start?.dateTime && e.transparency !== 'transparent')
+      .map((e) => {
+        const zoned = toZonedTime(new Date(e.start!.dateTime!), TIMEZONE);
+        return `${e.summary ?? 'Untitled'} (${format(zoned, 'h:mm a')})`;
+      });
+  } catch (err) {
+    // A freebusy failure must not block a booking the admin has decided on.
+    console.error('findConflicts failed:', err);
+    return [];
+  }
 }
