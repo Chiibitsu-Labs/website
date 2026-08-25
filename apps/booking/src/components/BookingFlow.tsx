@@ -165,12 +165,38 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
   }, []);
 
   const displayZone = viewerZone ?? HOST_TIMEZONE;
-  const showHostTime = viewerZone ? zonesDiffer(viewerZone, HOST_TIMEZONE) : false;
+
+  /**
+   * Zone names shift with DST, so label against the instant being shown rather
+   * than "now" — a booking across a changeover would otherwise read EST on an
+   * EDT session.
+   */
+  function zoneLabelAt(iso?: string): string {
+    const at = iso ? new Date(iso) : selectedDate ?? currentMonth;
+    return zoneDescription(displayZone, at);
+  }
+
+  /** Whether the viewer's clock differs from the host's at that instant. */
+  function hostDiffersAt(iso: string): boolean {
+    return viewerZone ? zonesDiffer(viewerZone, HOST_TIMEZONE, new Date(iso)) : false;
+  }
 
   /** Slot time range in the viewer's zone, falling back to the server labels. */
   function slotRange(slot: TimeSlot): string {
     if (!viewerZone) return `${slot.label} – ${slot.endLabel}`;
     return `${formatTimeInZone(slot.startISO, viewerZone)} – ${formatTimeInZone(slot.endISO, viewerZone)}`;
+  }
+
+  /**
+   * Slots are grouped by the HOST's date, so a slot on "Wed 26" in Manila can be
+   * Tuesday evening for the viewer. Name the viewer's own date on the row
+   * whenever it differs, or the header date silently contradicts the times.
+   */
+  function slotViewerDate(slot: TimeSlot): string | null {
+    if (!viewerZone) return null;
+    const mine = formatDateInZone(slot.startISO, viewerZone);
+    const host = formatDateInZone(slot.startISO, HOST_TIMEZONE);
+    return mine === host ? null : mine;
   }
 
   const today = startOfDay(new Date());
@@ -362,7 +388,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         </div>
 
         <p className="mt-4 text-xs text-gray-400 text-center">
-          Times shown in {zoneDescription(displayZone)}
+          Times shown in {zoneLabelAt()}
         </p>
       </div>
     );
@@ -384,7 +410,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
 
         <div className="flex items-baseline justify-between mb-3 gap-2">
           <p className="text-sm font-semibold text-gray-700">Available times</p>
-          <p className="text-xs text-gray-400">{zoneDescription(displayZone)}</p>
+          <p className="text-xs text-gray-400">{zoneLabelAt(slots[0]?.startISO)}</p>
         </div>
 
         {loadingSlots ? (
@@ -421,8 +447,13 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
                 `}
               >
                 <span className="flex flex-col items-start">
-                  <span>{slotRange(slot)}</span>
-                  {showHostTime && (
+                  <span>
+                    {slotViewerDate(slot) && (
+                      <span className="text-gray-500">{slotViewerDate(slot)} · </span>
+                    )}
+                    {slotRange(slot)}
+                  </span>
+                  {hostDiffersAt(slot.startISO) && (
                     <span className="text-xs font-normal text-gray-400">
                       {formatTimeInZone(slot.startISO, HOST_TIMEZONE)} in {friendlyZoneName(HOST_TIMEZONE)}
                     </span>
@@ -466,8 +497,8 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
             {' · '}
             {slotRange(selectedSlot)}
             <span className="block text-xs text-gray-400 mt-0.5">
-              {zoneDescription(displayZone)}
-              {showHostTime && ` · ${formatTimeInZone(selectedSlot.startISO, HOST_TIMEZONE)} in ${friendlyZoneName(HOST_TIMEZONE)}`}
+              {zoneLabelAt(selectedSlot.startISO)}
+              {hostDiffersAt(selectedSlot.startISO) && ` · ${formatTimeInZone(selectedSlot.startISO, HOST_TIMEZONE)} in ${friendlyZoneName(HOST_TIMEZONE)}`}
             </span>
           </div>
         )}
@@ -637,7 +668,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
               : format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
           <p className="text-gray-600 text-sm mt-0.5">{slotRange(selectedSlot)}</p>
-          <p className="text-xs text-gray-400 mt-1">{zoneDescription(displayZone)}</p>
+          <p className="text-xs text-gray-400 mt-1">{zoneLabelAt(selectedSlot.startISO)}</p>
         </div>
         <a href="/" className="text-sm text-gray-500 hover:text-gray-700 underline">
           Back to home
@@ -668,7 +699,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           <p className="text-gray-600 text-sm mt-0.5">
             {formatTimeInZone(result.startISO, displayZone)} – {formatTimeInZone(result.endISO, displayZone)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{zoneDescription(displayZone)}</p>
+          <p className="text-xs text-gray-400 mt-1">{zoneLabelAt(result.startISO)}</p>
         </div>
 
         <a href="/" className="text-sm text-gray-500 hover:text-gray-700 underline">

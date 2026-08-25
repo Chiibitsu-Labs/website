@@ -4,7 +4,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import { createBookingEvent, getUpcomingBookings } from '@/lib/google-calendar';
 import { sendBookingConfirmationToBooker } from '@/lib/email';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
-import { getProjectBySlug } from '@/lib/db';
+import { getAllProjectsAdmin } from '@/lib/db';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { errorMessage } from '@/lib/utils';
 
@@ -62,9 +62,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const project = await getProjectBySlug(slug);
+    // Resolve against the admin list, not getProjectBySlug: that filters to
+    // is_active and falls back to hard-coded SEED_PROJECTS, so booking a paused
+    // project would 404 — or worse, silently use seed config (wrong calendar,
+    // duration and title) for the two seed slugs.
+    const project = (await getAllProjectsAdmin()).find((p) => p.slug === slug);
     if (!project) {
       return NextResponse.json({ error: `No project found for "${slug}".` }, { status: 404 });
+    }
+
+    if (project.locationType === 'either' && !locationChoice) {
+      return NextResponse.json(
+        { error: 'This session can run online or face to face — say which.' },
+        { status: 400 },
+      );
     }
 
     const [hourStr, minuteStr] = String(time).split(':');

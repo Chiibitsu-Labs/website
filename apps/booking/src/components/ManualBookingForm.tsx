@@ -71,7 +71,12 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
       const res = await fetch('/api/admin/projects', {
         headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Without this the dropdown sits on "Loading…" forever with no reason given.
+        setError(data.error ?? `Could not load projects (${res.status}).`);
+        return;
+      }
       const list: AdminProject[] = data.projects ?? [];
       setProjects(list);
       if (list.length > 0) {
@@ -90,10 +95,13 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
-      // Default the duration to whatever the chosen project uses.
+      // Default the duration to whatever the chosen project uses, and drop the
+      // old location — otherwise a hidden stale choice is still POSTed and can
+      // put "In person" on an online-only session's invite.
       if (key === 'slug') {
         const proj = projects.find((p) => p.slug === value);
         if (proj) next.durationMinutes = proj.durationMinutes;
+        next.locationChoice = '';
       }
       return next;
     });
@@ -111,33 +119,52 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
   })();
   const minutes = form.durationMinutes > 0 ? form.durationMinutes : selected?.durationMinutes ?? 60;
   const previewEnd = previewStart ? addMinutes(previewStart, minutes) : null;
-  const showClientZone =
-    !!form.bookerTimezone && zonesDiffer(form.bookerTimezone, HOST_TIMEZONE);
+  // Label and compare against the session instant, not "now", so a booking
+  // across a DST changeover is not tagged with the wrong abbreviation.
+  const showClientZone = (() => {
+    if (!form.bookerTimezone) return false;
+    try {
+      return zonesDiffer(form.bookerTimezone, HOST_TIMEZONE, previewStart ?? undefined);
+    } catch {
+      return false; // unrecognised IANA id typed into the free-text field
+    }
+  })();
 
   async function handleSave() {
     if (!form.slug || !form.name || !form.email || !form.date || !form.time) {
       setError('Project, name, email, date and time are all required.');
       return;
     }
+    if (selected?.locationType === 'either' && !form.locationChoice) {
+      setError('This session can run online or face to face — pick one.');
+      return;
+    }
     setSaving(true);
     setError('');
 
-    const res = await fetch('/api/admin/bookings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-email': adminEmail,
-        'x-admin-password': adminPassword,
-      },
-      body: JSON.stringify({ ...form, durationMinutes: minutes }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error ?? 'Failed to create booking');
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': adminEmail,
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ ...form, durationMinutes: minutes }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Failed to create booking (${res.status})`);
+        setSaving(false);
+        return;
+      }
+      onSaved();
+    } catch {
+      // Without this the button stays stuck on "Adding…" with nothing shown,
+      // and no way to tell whether the invite already went out.
+      setError('Network error — check the Bookings list before retrying, in case it was created.');
       setSaving(false);
-      return;
     }
-    onSaved();
   }
 
   return (
@@ -222,7 +249,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
             </Field>
 
             {selected?.locationType === 'either' && (
-              <Field label="Location" hint="this project lets the client choose">
+              <Field label="Location" required hint="this project lets the client choose">
                 <select
                   value={form.locationChoice}
                   onChange={(e) => setField('locationChoice', e.target.value)}
@@ -261,7 +288,7 @@ export function ManualBookingForm({ adminEmail, adminPassword, onSaved, onCancel
                     {formatLongDateInZone(previewStart.toISOString(), form.bookerTimezone)},{' '}
                     {formatTimeInZone(previewStart.toISOString(), form.bookerTimezone)} –{' '}
                     {formatTimeInZone(previewEnd.toISOString(), form.bookerTimezone)}{' '}
-                    <span className="text-gray-500">({zoneDescription(form.bookerTimezone)})</span>
+                    <span className="text-gray-500">({zoneDescription(form.bookerTimezone, previewStart ?? undefined)})</span>
                   </p>
                 )}
               </div>

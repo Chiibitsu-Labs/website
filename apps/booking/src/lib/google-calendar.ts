@@ -141,11 +141,16 @@ function buildEventDescription(booking: BookingDetails): string {
   // When the project offers both, the booker's own choice wins over the
   // project-level default.
   const chosenLocation = booking.customFields.location_choice;
+  const undecided = !chosenLocation && booking.locationType === 'either';
   const isInPerson = chosenLocation
     ? chosenLocation.toLowerCase().startsWith('face')
     : booking.locationType === 'in_person';
 
-  const locationLine = isInPerson
+  // Never assert a format nobody agreed: an 'either' project with no recorded
+  // choice would otherwise promise a joining link for a face-to-face session.
+  const locationLine = undecided
+    ? '🗓 Format to be confirmed — we\'ll agree online or in person with you'
+    : isInPerson
     ? '📍 In person — we\'ll confirm the exact venue with you'
     : '💻 Online — we\'ll send the joining link before we start';
 

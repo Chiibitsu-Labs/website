@@ -58,11 +58,12 @@ function bookerLocalTimeBlock(booking: BookingDetails): string {
   const zone = booking.customFields?.booker_timezone;
   if (!zone) return '';
   try {
-    if (!zonesDiffer(zone, TIMEZONE)) return '';
+    const at = new Date(booking.startISO);
+    if (!zonesDiffer(zone, TIMEZONE, at)) return '';
     const date = formatLongDateInZone(booking.startISO, zone);
     const start = formatTimeInZone(booking.startISO, zone);
     const end = formatTimeInZone(booking.endISO, zone);
-    return `<p style="margin:12px 0 0;font-size:14px;color:#374151;"><strong>🌍 Your local time</strong><br>${date}<br>${start} – ${end} <span style="color:#6b7280;">(${zoneDescription(zone)})</span></p>`;
+    return `<p style="margin:12px 0 0;font-size:14px;color:#374151;"><strong>🌍 Your local time</strong><br>${date}<br>${start} – ${end} <span style="color:#6b7280;">(${zoneDescription(zone, at)})</span></p>`;
   } catch {
     return '';
   }
