@@ -1,0 +1,19 @@
+# What the marketing site at chiibitsu.com actually needs is index.html, about/,
+# angeline/, angeline.pdf and lead-magnets/. Everything below is source or working
+# material that this repo happens to carry, and that a static root deploy would
+# otherwise publish verbatim.
+#
+# This file applies to the `website` project only. `chiibitsu-booking` and
+# `lm-booking-site` build from this same repo with their own Root Directory, so
+# Vercel resolves .vercelignore inside those subtrees, not here.
+
+# Booking app source — served the whole Next.js tree, including its README
+# (admin route, auth model, env var names) and src/lib/*.ts.
+apps
+
+# CI config.
+.github
+
+# Internal working files.
+CLAUDE.md
+README.md
