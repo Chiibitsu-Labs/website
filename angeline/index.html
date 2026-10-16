@@ -175,6 +175,24 @@
   }
   .fix-a{font-size:16.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
 
+  /* ---- testimonials ---- */
+  /* Two columns rather than the .fix grid's three: these quotes run longer
+     than the "called in for" ones, and at three-up the attribution lines
+     wrap to four. */
+  /* figure/blockquote/figcaption rather than sibling <p>s: these are real
+     attributed quotes, so a screen reader should get the quote boundary
+     and the tie to its attribution. The #fix quotes stay plain <p> — those
+     are composite lines, not anyone's words. Default figure/blockquote
+     margins are zeroed so the rendering is unchanged. */
+  .says{display:grid;grid-template-columns:repeat(2,1fr);gap:30px 36px;}
+  .says figure{margin:0;}
+  .say-q{
+    font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+    font-size:21px;color:var(--purple-dk);line-height:1.3;margin:0 0 10px;
+  }
+  .say-q p{margin:0;}
+  .say-w{font-size:14px;color:var(--ink-faint);margin:0;line-height:1.45;}
+
   /* ---- offers ---- */
   .offers{display:grid;gap:1px;background:var(--rule);
           border:1px solid var(--rule);}
@@ -269,6 +287,7 @@
   @media(max-width:860px){
     .now{grid-template-columns:1fr;}
     .fix{grid-template-columns:1fr;gap:22px;}
+    .says{grid-template-columns:1fr;gap:24px;}
     .proof{grid-template-columns:repeat(2,1fr);}
     .offer{grid-template-columns:1fr;gap:12px;}
   }
@@ -535,9 +554,34 @@
       <div class="chips">
         <span class="chip">BS Chemistry, University of Santo Tomas</span>
         <span class="chip">Licensed Chemist (RCh)</span>
+        <span class="chip">Neuro-Linguistic Programming (NLP)</span>
         <span class="chip">ITIL v3 Foundations</span>
         <span class="chip">HP Certified Technical Mentor</span>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="says">
+  <div class="wrap">
+    <p class="label">What clients say</p>
+    <div class="says">
+      <figure>
+        <blockquote class="say-q"><p>“It wasn’t a generic template ~ it was built around our own products and sales funnels.”</p></blockquote>
+        <figcaption class="say-w">Owner, home-goods retailer · AI @ Work workshop · shared with permission, anonymized</figcaption>
+      </figure>
+      <figure>
+        <blockquote class="say-q"><p>“You are a natural teacher and coach ~ your gift to us non-AI people. I offered before and someone close to me wasn’t interested; now he wants to join.”</p></blockquote>
+        <figcaption class="say-w">Founder, antique silver and collectibles · private 1:1 AI sessions · shared with permission, anonymized</figcaption>
+      </figure>
+      <figure>
+        <blockquote class="say-q"><p>“I already knew some of these things, but I wasn’t doing them. Chii helped me turn them into a pattern I could actually follow.”</p></blockquote>
+        <figcaption class="say-w">Founder, Japan-import retail and e-commerce · current client across several engagements · shared with permission</figcaption>
+      </figure>
+      <figure>
+        <blockquote class="say-q"><p>“There’s always something different in your behavior or your process ~ so it’s a continuous thing. The classes aren’t just one time and that’s it.”</p></blockquote>
+        <figcaption class="say-w">Executive, real estate · private 1:1 AI sessions · shared with permission, anonymized</figcaption>
+      </figure>
     </div>
   </div>
 </section>
