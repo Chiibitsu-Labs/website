@@ -63,7 +63,7 @@ export const SEED_PROJECTS: Project[] = [
   {
     slug: 'ai-at-work',
     name: 'AI @ Work: Use Case Lab',
-    company: 'Futureproof',
+    company: 'Chiibitsu Labs',
     tagline: 'AI Training for Companies',
     description:
       'A hands-on half-day workshop helping your team identify and prototype real AI use cases for your business. Perfect for leadership teams, operations, and product groups ready to move from curiosity to action.',
