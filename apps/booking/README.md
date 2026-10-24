@@ -70,7 +70,7 @@ ADMIN_EMAIL=chii@chiibitsu.com
 **Add the subdomain:**
 - In DigitalOcean App settings, add the domain `book.chiibitsu.com`
 - In your DNS (wherever chiibitsu.com is managed), add a CNAME record:
-  `booking → <your-do-app-url>.ondigitalocean.app`
+  `book → <your-do-app-url>.ondigitalocean.app`
 
 ---
 
