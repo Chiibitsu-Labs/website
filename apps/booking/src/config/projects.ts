@@ -116,7 +116,7 @@ export const SEED_PROJECTS: Project[] = [
   {
     slug: 'aicos-fit-call',
     name: 'AICOS Fit Call',
-    company: 'Lighthouse',
+    company: 'Chiibitsu Labs',
     tagline: 'Discovery Call for AICOS',
     description:
       'A focused 45-minute discovery call to explore if AICOS is the right fit for you or your organisation. We\'ll cover your current challenges, goals, and how AI-powered coaching can help you get there.',
