@@ -389,7 +389,7 @@ function SetupTab({ adminPassword }: { adminPassword: string }) {
 
   const callbackUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/api/auth/google/callback`
-    : 'https://booking.chiibitsu.com/api/auth/google/callback';
+    : 'https://book.chiibitsu.com/api/auth/google/callback';
 
   return (
     <div className="max-w-2xl space-y-6">

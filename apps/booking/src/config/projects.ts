@@ -63,7 +63,7 @@ export const SEED_PROJECTS: Project[] = [
   {
     slug: 'ai-at-work',
     name: 'AI @ Work: Use Case Lab',
-    company: 'Futureproof',
+    company: 'Chiibitsu Labs',
     tagline: 'AI Training for Companies',
     description:
       'A hands-on half-day workshop helping your team identify and prototype real AI use cases for your business. Perfect for leadership teams, operations, and product groups ready to move from curiosity to action.',
@@ -116,7 +116,7 @@ export const SEED_PROJECTS: Project[] = [
   {
     slug: 'aicos-fit-call',
     name: 'AICOS Fit Call',
-    company: 'Lighthouse',
+    company: 'Chiibitsu Labs',
     tagline: 'Discovery Call for AICOS',
     description:
       'A focused 45-minute discovery call to explore if AICOS is the right fit for you or your organisation. We\'ll cover your current challenges, goals, and how AI-powered coaching can help you get there.',

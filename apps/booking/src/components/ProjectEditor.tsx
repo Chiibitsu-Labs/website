@@ -209,7 +209,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
                 <Input value={form.name} onChange={(v) => setField('name', v)} placeholder="AI @ Work: Use Case Lab" />
               </Field>
               <Field label="Company / Brand" required>
-                <Input value={form.company} onChange={(v) => setField('company', v)} placeholder="Futureproof" />
+                <Input value={form.company} onChange={(v) => setField('company', v)} placeholder="Chiibitsu Labs" />
               </Field>
               <Field label="Tagline" hint="One short line shown on the booking page">
                 <Input value={form.tagline} onChange={(v) => setField('tagline', v)} placeholder="AI Training for Companies" />
@@ -224,7 +224,7 @@ export function ProjectEditor({ project, adminEmail, adminPassword, onSave, onCa
                 />
               </Field>
               {isNew && (
-                <Field label="URL slug" hint={`booking.chiibitsu.com/${form.slug || 'your-slug'}`}>
+                <Field label="URL slug" hint={`book.chiibitsu.com/${form.slug || 'your-slug'}`}>
                   <Input value={form.slug} onChange={(v) => setField('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} placeholder="ai-at-work" />
                 </Field>
               )}
