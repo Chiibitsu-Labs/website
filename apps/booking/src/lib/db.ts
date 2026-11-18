@@ -2,6 +2,24 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import type { Project, TimeSlotTemplate, CustomField } from '@/config/projects';
 import { SEED_PROJECTS } from '@/config/projects';
+import { ADMIN_LOCATION_KEY } from './location';
+
+/**
+ * Custom-field ids only the admin panel may write. /api/book drops a posted
+ * value under these keys (so a booker cannot forge an admin note or location
+ * override), which means a project field with one of these ids would have its
+ * answers silently discarded. Refuse them at save time instead.
+ * Mirrors ADMIN_WRITTEN_FIELDS in google-calendar.ts, kept here so db.ts does
+ * not pull in googleapis.
+ */
+const RESERVED_FIELD_IDS = new Set(['admin_note', ADMIN_LOCATION_KEY]);
+
+function assertNoReservedFieldIds(fields: CustomField[] | undefined): void {
+  const clash = (fields ?? []).find((f) => RESERVED_FIELD_IDS.has(String(f?.id ?? '').trim()));
+  if (clash) {
+    throw new Error(`Custom field id "${clash.id}" is reserved for admin use. Rename the field.`);
+  }
+}
 
 interface ProjectRow {
   id: string;
@@ -227,6 +245,8 @@ export async function createProject(input: ProjectInput): Promise<Project> {
   const client = getClient();
   if (!client) throw new Error('Database not configured');
 
+  assertNoReservedFieldIds(input.customFields);
+
   const { data, error } = await client
     .from('booking_projects')
     .insert({
@@ -268,7 +288,10 @@ export async function updateProject(slug: string, input: Partial<ProjectInput> &
   if (input.brandingColor !== undefined) patch.branding_color = input.brandingColor;
   if ('brandingEmoji' in input) patch.branding_emoji = input.brandingEmoji ?? null;
   if (input.timeSlots !== undefined) patch.time_slots = input.timeSlots;
-  if (input.customFields !== undefined) patch.custom_fields = input.customFields;
+  if (input.customFields !== undefined) {
+    assertNoReservedFieldIds(input.customFields);
+    patch.custom_fields = input.customFields;
+  }
   if (input.bookingWindowWeeks !== undefined) patch.booking_window_weeks = input.bookingWindowWeeks;
   if ('calendarId' in input) patch.calendar_id = input.calendarId ?? null;
   if (input.isPaid !== undefined) patch.is_paid = input.isPaid;
