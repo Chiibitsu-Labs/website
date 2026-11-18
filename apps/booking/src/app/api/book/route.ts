@@ -119,6 +119,9 @@ export async function POST(req: NextRequest) {
     // reverted to the project default.
     const adminOverride = reschedulePayload?.customFields?.[ADMIN_LOCATION_KEY];
     delete customFields[ADMIN_LOCATION_KEY];
+    // Also admin-only, and never booker input: the admin panel and Telegram
+    // label it as the admin's own note, so a posted value would read as one.
+    delete customFields.admin_note;
     // Restored only where the booker was NOT asked. Where they were, the form
     // just required them to choose, and an override carried forward would
     // overrule the answer they gave seconds ago — and since each new token

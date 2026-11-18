@@ -97,15 +97,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [hourStr, minuteStr] = String(time).split(':');
-    const hour = Number(hourStr);
-    const minute = Number(minuteStr ?? 0);
-    // Range-check explicitly: setHours(25, …) silently rolls into the next day,
-    // so a typo would book a different date than the one on screen.
-    if (
-      !Number.isInteger(hour) || hour < 0 || hour > 23 ||
-      !Number.isInteger(minute) || minute < 0 || minute > 59
-    ) {
+    // Strict HH:MM. A loose split(':') let values like "12:" or "7" through,
+    // and a raw value with "_" or "*" would make the Telegram notice 400.
+    // Range-checked by the pattern: setHours(25, …) silently rolls into the
+    // next day, so a typo would book a different date than the one on screen.
+    const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(time));
+    const hour = timeMatch ? Number(timeMatch[1]) : NaN;
+    const minute = timeMatch ? Number(timeMatch[2]) : NaN;
+    if (!timeMatch) {
       return NextResponse.json(
         { error: 'Invalid time. Use HH:MM between 00:00 and 23:59.' },
         { status: 400 },
@@ -205,7 +204,7 @@ export async function POST(req: NextRequest) {
 
     if (hasTelegram()) {
       await sendSimpleMessage(
-        `✍️ *Booking added manually*\n${escapeMarkdown(project.name)} · ${escapeMarkdown(String(name))}\n${date} ${time} (${minutes} min)` +
+        `✍️ *Booking added manually*\n${escapeMarkdown(project.name)} · ${escapeMarkdown(String(name))}\n${date} ${pad(hour)}:${pad(minute)} (${minutes} min)` +
           (customFields.admin_note ? `\n📝 ${escapeMarkdown(customFields.admin_note)}` : '') +
           (sendEmail ? '' : '\n(client not notified)'),
       ).catch(() => {});
