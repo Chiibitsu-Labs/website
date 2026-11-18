@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
@@ -9,16 +10,30 @@ import { usePathname } from 'next/navigation';
 const CLARITY_PROJECT_ID = 'z0kcrqus8a';
 
 /**
- * Clarity on the public booking pages only, never on /admin.
+ * Clarity on the public booking pages only. Two places are never recorded:
  *
- * Clarity masks what visitors type into fields by default, but it records
- * text already on the screen. The admin dashboard shows every client's name,
- * email, phone and the admin's private notes, so a recording there would send
- * all of it to Microsoft.
+ * - /admin: Clarity masks what visitors type by default, but it records text
+ *   already on the screen, and the admin dashboard shows every client's name,
+ *   email, phone and the admin's private notes.
+ * - Any page opened from a reschedule link: the link carries its token in the
+ *   URL (`?reschedule=…`). The token is signed, not encrypted, so it holds the
+ *   client's name, email and phone in readable form, and it is also what lets
+ *   them change the booking. Clarity records page URLs, so loading it there
+ *   would send both to Microsoft.
+ *
+ * The URL check runs after mount, not during render, so the server and the
+ * first client render agree and the page needs no Suspense boundary.
  */
 export function ClarityTag() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  const [allowed, setAllowed] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setAllowed(!pathname?.startsWith('/admin') && !params.has('reschedule'));
+  }, [pathname]);
+
+  if (!allowed) return null;
 
   return (
     <Script id="microsoft-clarity" strategy="afterInteractive">
