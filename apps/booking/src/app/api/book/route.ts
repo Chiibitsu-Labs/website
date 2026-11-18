@@ -5,6 +5,7 @@ import {
   sendBookingConfirmationToBooker,
   sendBookingNotificationToAdmin,
   sendPendingBookingToBooker,
+  sendApprovalFallbackToAdmin,
 } from '@/lib/email';
 import { createPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
@@ -15,6 +16,7 @@ import {
   LOCATION_CHOICES,
   isLocationChoice,
 } from '@/lib/location';
+import { prettifyFieldKey } from '@/lib/utils';
 import { format, addDays, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -195,21 +197,46 @@ export async function POST(req: NextRequest) {
         ? format(toZonedTime(new Date(reschedulePayload.originalStartISO), TIMEZONE), 'EEE, MMM d, yyyy h:mm a')
         : undefined;
 
-      await sendApprovalRequest({
+      // Show field labels, not internal ids (ids like field_123 break Markdown).
+      // Ids with no project label (our reserved keys, e.g. booker_timezone) are
+      // prettified instead, so they read cleanly in Telegram and the fallback email.
+      const labeledFields = Object.fromEntries(
+        Object.entries(customFields as Record<string, string>).map(([id, v]) => [
+          project.customFields.find((f) => f.id === id)?.label.trim() ?? prettifyFieldKey(id),
+          v,
+        ]),
+      );
+      const dateLabel = format(zonedStart, 'EEE, MMM d, yyyy');
+      const timeLabel = format(zonedStart, 'h:mm a');
+
+      const delivered = await sendApprovalRequest({
         bookingToken: token,
         bookerName: name,
         bookerEmail: email,
         bookerPhone: phone,
         bookerCompany: company,
         projectName: project.name,
-        dateLabel: format(zonedStart, 'EEE, MMM d, yyyy'),
-        timeLabel: format(zonedStart, 'h:mm a'),
+        dateLabel,
+        timeLabel,
         endLabel: format(zonedEnd, 'h:mm a'),
-        customFields,
+        customFields: labeledFields,
         baseUrl,
         isReschedule: !!reschedulePayload,
         originalDateLabel,
       });
+
+      if (!delivered) {
+        await sendApprovalFallbackToAdmin({
+          bookerName: name,
+          bookerEmail: email,
+          projectName: project.name,
+          dateLabel,
+          timeLabel,
+          customFields: labeledFields,
+          baseUrl,
+          bookingToken: token,
+        }).catch((e) => console.error('Approval fallback email failed:', e));
+      }
 
       await sendPendingBookingToBooker(booking, project).catch(() => {});
 
