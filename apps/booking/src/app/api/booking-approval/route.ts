@@ -9,6 +9,7 @@ import {
   sendBookingNotificationToAdmin,
 } from '@/lib/email';
 import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { esc } from '@/lib/escape.mjs';
 
 function page(icon: string, heading: string, body: string) {
   return new NextResponse(
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
     return page(
       '❌',
       'Booking rejected',
-      `You've declined the booking for <strong>${payload.name}</strong>. A rejection email has been sent to ${payload.email}.`,
+      `You've declined the booking for <strong>${esc(payload.name)}</strong>. A rejection email has been sent to ${esc(payload.email)}.`,
     );
   }
 
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest) {
     return page(
       '✅',
       'Booking approved!',
-      `The slot for <strong>${payload.name}</strong> is confirmed. A confirmation email has been sent to ${payload.email}.`,
+      `The slot for <strong>${esc(payload.name)}</strong> is confirmed. A confirmation email has been sent to ${esc(payload.email)}.`,
     );
   } catch (err) {
     console.error('Approval booking error:', err);
