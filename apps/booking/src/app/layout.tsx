@@ -3,6 +3,7 @@ import './globals.css';
 import { siteConfig } from '@/config/projects';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
+import { ClarityTag } from '@/components/ClarityTag';
 
 export const metadata: Metadata = {
   title: {
@@ -24,6 +25,7 @@ export default function RootLayout({
         {children}
         <SpeedInsights />
         <Analytics />
+        <ClarityTag />
       </body>
     </html>
   );
