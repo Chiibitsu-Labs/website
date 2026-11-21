@@ -289,3 +289,49 @@ export async function sendBookingNotificationToAdmin(
     `,
   });
 }
+
+// Fallback when Telegram could not deliver an approval request: the approval
+// links exist only in the message, so without this the booking is lost.
+export async function sendApprovalFallbackToAdmin({
+  bookerName,
+  bookerEmail,
+  projectName,
+  dateLabel,
+  timeLabel,
+  customFields,
+  baseUrl,
+  bookingToken,
+}: {
+  bookerName: string;
+  bookerEmail: string;
+  projectName: string;
+  dateLabel: string;
+  timeLabel: string;
+  customFields: Record<string, string>;
+  baseUrl: string;
+  bookingToken: string;
+}) {
+  const resend = getResend();
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'chii@chiibitsu.com';
+  const esc = (v: string) =>
+    v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const link = (action: 'approve' | 'reject') =>
+    `${baseUrl}/api/booking-approval?token=${encodeURIComponent(bookingToken)}&action=${action}`;
+  const fields = Object.entries(customFields)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `• ${esc(k)}: ${esc(v)}`)
+    .join('\n');
+
+  await resend.emails.send({
+    from: fromField(),
+    to: adminEmail,
+    subject: `Approval needed (Telegram failed): ${projectName} — ${bookerName}`,
+    html: `
+<div style="font-family:system-ui,sans-serif;max-width:520px;">
+  <p>Telegram could not deliver this approval request.</p>
+  <p><strong>${esc(projectName)}</strong><br>${esc(dateLabel)}, ${esc(timeLabel)}<br>${esc(bookerName)} · ${esc(bookerEmail)}</p>
+  ${fields ? `<pre style="white-space:pre-wrap;">${fields}</pre>` : ''}
+  <p><a href="${link('approve')}">✅ Approve</a> &nbsp; <a href="${link('reject')}">❌ Reject</a></p>
+</div>`,
+  });
+}
