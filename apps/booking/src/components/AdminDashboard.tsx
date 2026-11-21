@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { AdminBooking } from '@/lib/google-calendar';
 import type { Project } from '@/config/projects';
 import { ProjectEditor } from './ProjectEditor';
+import { ManualBookingForm } from './ManualBookingForm';
 
 type Tab = 'bookings' | 'projects' | 'setup';
 type AdminProject = Project & { isActive: boolean; id: string };
@@ -116,38 +117,98 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterSlug, setFilterSlug] = useState('all');
+  const [adding, setAdding] = useState(false);
+  // A failed load must never render as "No upcoming bookings": that reads as
+  // an empty calendar when the real state is unknown.
+  const [loadError, setLoadError] = useState('');
+  const [failedCalendars, setFailedCalendars] = useState(0);
+  const [projectListFailed, setProjectListFailed] = useState(false);
 
   async function load() {
     setLoading(true);
-    const res = await fetch('/api/admin/bookings', {
-      headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
-    });
-    const data = await res.json();
-    setBookings(data.bookings ?? []);
+    setLoadError('');
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        headers: { 'x-admin-email': adminEmail, 'x-admin-password': adminPassword },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(data.bookings)) {
+        setLoadError(
+          data.error
+            ? `Could not load bookings: ${data.error}.`
+            : 'Could not load bookings.',
+        );
+        setBookings(null);
+        setFailedCalendars(0);
+        setProjectListFailed(false);
+      } else {
+        setBookings(data.bookings);
+        setFailedCalendars(Number(data.failedCalendars) || 0);
+        setProjectListFailed(data.projectListFailed === true);
+      }
+    } catch {
+      setLoadError('Could not load bookings: the request failed.');
+      setBookings(null);
+      setFailedCalendars(0);
+      setProjectListFailed(false);
+    }
     setLoading(false);
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
-  if (loading && !bookings) return <Spinner />;
+  if (loading && !bookings && !loadError) return <Spinner />;
 
   const uniqueSlugs = Array.from(new Set((bookings ?? []).map((b) => b.projectSlug)));
-  const filtered = filterSlug === 'all' ? bookings! : bookings!.filter((b) => b.projectSlug === filterSlug);
+  const all = bookings ?? [];
+  const filtered = filterSlug === 'all' ? all : all.filter((b) => b.projectSlug === filterSlug);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
         <h2 className="text-white font-bold text-xl">Upcoming Bookings</h2>
-        <button onClick={load} className="text-gray-400 hover:text-white text-sm transition">↻ Refresh</button>
+        <div className="flex items-center gap-3">
+          <button onClick={load} className="text-gray-400 hover:text-white text-sm transition">↻ Refresh</button>
+          <button
+            onClick={() => setAdding(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition"
+          >
+            + Add booking
+          </button>
+        </div>
       </div>
+
+      {adding && (
+        <ManualBookingForm
+          adminEmail={adminEmail}
+          adminPassword={adminPassword}
+          onSaved={() => { setAdding(false); load(); }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+      {loadError && (
+        <p className="text-red-400 text-sm mb-5" role="alert">
+          {loadError} Try ↻ Refresh.
+        </p>
+      )}
+      {!loadError && projectListFailed && (
+        <p className="text-amber-400 text-sm mb-5" role="alert">
+          The session list could not be read, so bookings on session-specific calendars may be missing.
+        </p>
+      )}
+      {!loadError && failedCalendars > 0 && (
+        <p className="text-amber-400 text-sm mb-5" role="alert">
+          {failedCalendars === 1 ? 'One calendar' : `${failedCalendars} calendars`} could not be read, so this list may be missing bookings.
+        </p>
+      )}
       <div className="flex gap-2 mb-5 flex-wrap">
         <FilterBtn active={filterSlug === 'all'} onClick={() => setFilterSlug('all')}>All</FilterBtn>
         {uniqueSlugs.map((slug) => (
           <FilterBtn key={slug} active={filterSlug === slug} onClick={() => setFilterSlug(slug)}>{slug}</FilterBtn>
         ))}
       </div>
-      {filtered.length === 0 ? (
+      {loadError ? null : filtered.length === 0 ? (
         <p className="text-gray-500 text-center py-12">No upcoming bookings.</p>
       ) : (
         <div className="space-y-3">{filtered.map((b) => (
@@ -507,6 +568,9 @@ function BookingRow({
         },
         body: JSON.stringify({
           eventId: booking.eventId,
+          // Bookings can live on a project's own calendar; without this the
+          // cancel falls back to the default calendar and 404s.
+          calendarId: booking.calendarId,
           bookerName: booking.bookerName,
           projectName: booking.projectName,
           dateLabel: booking.dateLabel,

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPendingToken } from '@/lib/pending-token';
 import { verifyRescheduleToken } from '@/lib/reschedule-token';
-import { getProjectBySlug } from '@/lib/db';
+import { getProjectBySlugIncludingPaused } from '@/lib/db';
 import { createBookingEvent, cancelBookingEvent } from '@/lib/google-calendar';
 import {
   sendApprovalConfirmation,
   sendRejectionEmail,
   sendBookingNotificationToAdmin,
 } from '@/lib/email';
-import { sendSimpleMessage, hasTelegram } from '@/lib/telegram';
+import { sendSimpleMessage, hasTelegram, escapeMarkdown } from '@/lib/telegram';
 
 function page(icon: string, heading: string, body: string) {
   return new NextResponse(
@@ -50,7 +50,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const project = await getProjectBySlug(payload.projectSlug);
+  // Paused-inclusive, and no slug match to check: the slug comes from the
+  // signed pending token itself. This is the step that actually creates the
+  // event when Telegram is configured, so an active-only lookup here undid the
+  // paused tolerance the page, availability and /api/book grant — Chii would
+  // tap Approve and get "Project not found", leaving a paying client with a
+  // request that is never answered and an old event never cancelled. For a seed
+  // slug it was worse: it fell back to SEED_PROJECTS and would have created the
+  // invite on the default calendar with seed copy instead of the real settings.
+  const project = await getProjectBySlugIncludingPaused(payload.projectSlug);
   if (!project) {
     return page('❓', 'Project not found', 'Could not find the project for this booking.');
   }
@@ -69,13 +77,14 @@ export async function GET(req: NextRequest) {
     calendarEventTitleTemplate: project.calendarEventTitleTemplate,
     projectDescription: project.description,
     locationType: project.locationType,
+    projectFieldIds: project.customFields.map((f) => f.id),
   };
 
   if (action === 'reject') {
     await sendRejectionEmail(booking, project).catch(() => {});
     if (hasTelegram()) {
       await sendSimpleMessage(
-        `❌ *Rejected* · ${project.name} · ${payload.name}\nRejection email sent to ${payload.email}`,
+        `❌ *Rejected* · ${escapeMarkdown(project.name)} · ${escapeMarkdown(payload.name)}\nRejection email sent to ${escapeMarkdown(payload.email)}`,
       ).catch(() => {});
     }
     return page(
@@ -109,7 +118,7 @@ export async function GET(req: NextRequest) {
         ? ` · ${new Date(booking.startISO).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}`
         : '';
       await sendSimpleMessage(
-        `✅ *Approved* · ${project.name} · ${payload.name}${dateInfo}\nConfirmation email sent to ${payload.email}`,
+        `✅ *Approved* · ${escapeMarkdown(project.name)} · ${escapeMarkdown(payload.name)}${dateInfo}\nConfirmation email sent to ${escapeMarkdown(payload.email)}`,
       ).catch(() => {});
     }
 

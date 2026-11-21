@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectBySlug } from '@/lib/db';
+import { resolveProjectForSlug } from '@/lib/db';
 import { getAvailableSlots } from '@/lib/google-calendar';
+import { verifyRescheduleToken } from '@/lib/reschedule-token';
 import { parseISO, isValid, isBefore, startOfDay, addWeeks } from 'date-fns';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const slug = searchParams.get('slug');
   const date = searchParams.get('date');
+  const rescheduleToken = searchParams.get('reschedule');
 
   if (!slug || !date) {
     return NextResponse.json({ error: 'Missing slug or date' }, { status: 400 });
   }
 
-  const project = await getProjectBySlug(slug);
+  // The page and /api/book already let a valid token holder through to a paused
+  // project; this endpoint feeds the picker between them, so leaving it
+  // active-only made the reschedule page load and then show "No slots
+  // available" on every date — visibly working, actually a dead end.
+  const payload = rescheduleToken ? verifyRescheduleToken(rescheduleToken) : null;
+  const project = await resolveProjectForSlug(slug, payload);
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }

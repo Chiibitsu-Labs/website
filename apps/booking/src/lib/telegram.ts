@@ -2,9 +2,17 @@ export function hasTelegram(): boolean {
   return !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
-// Escapes legacy-Markdown control characters in user-supplied text.
-function escapeMarkdown(v: string): string {
-  return v.replace(/([_*`\[])/g, '\\$1');
+/**
+ * Escape user-supplied text before interpolating it into a Markdown payload.
+ * An unescaped `_` or `*` in a client name or note makes Telegram reject the
+ * whole message with a 400 — and since fetch resolves on 4xx, the failure is
+ * swallowed and the notification is simply lost.
+ */
+export function escapeMarkdown(text: string): string {
+  // Backslash is in the class so it is escaped in the same pass (no double
+  // processing). ']' is deliberately absent: legacy Markdown cannot escape it,
+  // and emitting a backslash before it would show up literally in the message.
+  return text.replace(/([\\_*[`])/g, '\\$1');
 }
 
 export async function sendSimpleMessage(text: string) {
@@ -12,11 +20,23 @@ export async function sendSimpleMessage(text: string) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return;
 
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
-  }).catch((e) => console.error('Telegram sendSimpleMessage error:', e));
+  }).catch((e) => {
+    console.error('Telegram sendSimpleMessage error:', e);
+    return null;
+  });
+
+  // fetch only rejects on network failure, so a rejected payload is otherwise silent.
+  if (res && !res.ok) {
+    console.error(
+      'Telegram sendSimpleMessage rejected:',
+      res.status,
+      await res.text().catch(() => ''),
+    );
+  }
 }
 
 export async function sendApprovalRequest({
@@ -77,14 +97,14 @@ export async function sendApprovalRequest({
       : `⏳ ${b('New booking — approval needed')}`;
 
     const dateSection = isReschedule && originalDateLabel
-      ? `📅 ${b('New date:')} ${dateLabel}\n↩️ ${b('Was:')} ${originalDateLabel}`
-      : `📅 ${dateLabel}`;
+      ? `📅 ${b('New date:')} ${e(dateLabel)}\n↩️ ${b('Was:')} ${e(originalDateLabel)}`
+      : `📅 ${e(dateLabel)}`;
 
     return (
       `${header}\n\n` +
       `📌 ${e(projectName)}\n` +
       `${dateSection}\n` +
-      `🕐 ${timeLabel} – ${endLabel}\n\n` +
+      `🕐 ${e(timeLabel)} – ${e(endLabel)}\n\n` +
       `👤 ${e(bookerName)}\n` +
       `📧 ${e(bookerEmail)}` +
       (extraLines ? `\n${extraLines}` : '') +
@@ -114,7 +134,7 @@ export async function sendApprovalRequest({
       console.error(
         `Telegram sendApprovalRequest failed (${attempt.parse_mode ?? 'plain'}):`,
         res.status,
-        await res.text(),
+        await res.text().catch(() => ''),
       );
     } catch (e) {
       console.error('Telegram sendApprovalRequest error:', e);

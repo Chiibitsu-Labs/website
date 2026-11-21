@@ -37,6 +37,12 @@ export function bgLightClass(branding: { primaryColor: string; lightShade: strin
   return `bg-${branding.primaryColor}-${branding.lightShade}`;
 }
 
+/** Turn a custom-field id into a readable label: "company_name" -> "Company name". */
+export function prettifyFieldKey(key: string): string {
+  const spaced = key.replace(/[_-]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 export function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {

@@ -1,9 +1,17 @@
 import { Resend } from 'resend';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import type { BookingDetails } from './google-calendar';
+import { describeLocation, hiddenFieldsFor, stripAdminOnlyFields, type BookingDetails } from './google-calendar';
 import type { Project } from '@/config/projects';
+import { prettifyFieldKey } from './utils';
 import { createRescheduleToken } from './reschedule-token';
+import {
+  formatLongDateInZone,
+  formatTimeInZone,
+  friendlyZoneName,
+  zoneDescription,
+  zonesDiffer,
+} from './timezone';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
@@ -41,6 +49,26 @@ function formatDateTime(isoString: string) {
   };
 }
 
+/**
+ * Bookers abroad think in their own clock. We capture their timezone at booking
+ * time, so echo the session back in it — otherwise a Manila-only time is a
+ * twelve-hour trap for someone in Canada.
+ */
+function bookerLocalTimeBlock(booking: BookingDetails): string {
+  const zone = booking.customFields?.booker_timezone;
+  if (!zone) return '';
+  try {
+    const at = new Date(booking.startISO);
+    if (!zonesDiffer(zone, TIMEZONE, at)) return '';
+    const date = formatLongDateInZone(booking.startISO, zone);
+    const start = formatTimeInZone(booking.startISO, zone);
+    const end = formatTimeInZone(booking.endISO, zone);
+    return `<p style="margin:12px 0 0;font-size:14px;color:#374151;"><strong>🌍 Your local time</strong><br>${date}<br>${start} – ${end} <span style="color:#6b7280;">${zoneDescription(zone, at)}</span></p>`;
+  } catch {
+    return '';
+  }
+}
+
 function buildRescheduleUrl(booking: BookingDetails, eventId: string, calendarId?: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
   const token = createRescheduleToken({
@@ -51,10 +79,18 @@ function buildRescheduleUrl(booking: BookingDetails, eventId: string, calendarId
     bookerEmail: booking.bookerEmail,
     bookerPhone: booking.bookerPhone ?? '',
     bookerCompany: booking.bookerCompany ?? '',
-    customFields: booking.customFields,
+    // The booker can decode this token from their own reschedule link.
+    customFields: stripAdminOnlyFields(booking.customFields),
     originalStartISO: booking.startISO,
     originalEndISO: booking.endISO,
-    expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+    // A flat 90 days assumed bookings are always near-term. The admin can now
+    // book any future date by hand, so a session eight months out would have
+    // handed the client a link that died months before their own reschedule
+    // deadline. Never expire before the session itself.
+    expiresAt: Math.max(
+      Date.now() + 90 * 24 * 60 * 60 * 1000,
+      new Date(booking.startISO).getTime() + 24 * 60 * 60 * 1000,
+    ),
   });
   return `${baseUrl}/${booking.projectSlug}?reschedule=${token}`;
 }
@@ -72,8 +108,10 @@ export async function sendBookingConfirmationToBooker(
   const to = formatDateTime(booking.endISO);
 
   const customFieldsHtml = Object.entries(booking.customFields)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `<tr><td style="padding:4px 8px;color:#6b7280;font-size:14px;">${k}</td><td style="padding:4px 8px;font-size:14px;">${v}</td></tr>`)
+    // booker_timezone is surfaced as the "Your local time" block; admin_note
+    // is internal. Neither belongs in the client's copy.
+    .filter(([k, v]) => v && !hiddenFieldsFor(booking.projectFieldIds).has(k))
+    .map(([k, v]) => `<tr><td style="padding:4px 8px;color:#6b7280;font-size:14px;">${prettifyFieldKey(k)}</td><td style="padding:4px 8px;font-size:14px;">${v}</td></tr>`)
     .join('');
 
   await resend.emails.send({
@@ -95,7 +133,9 @@ export async function sendBookingConfirmationToBooker(
 
       <div style="background:#f3f4f6;border-radius:12px;padding:20px;margin-bottom:24px;">
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
-        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
+        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
+        ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
 
       <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#111827;">Your details</p>
@@ -145,7 +185,9 @@ export async function sendPendingBookingToBooker(
       <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">${project.company}</p>
       <div style="background:#f3f4f6;border-radius:12px;padding:20px;margin-bottom:24px;">
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
-        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
+        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
+        ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
       <p style="font-size:14px;color:#374151;">Your booking request has been received and is being reviewed by Chiibitsu Labs.</p>
@@ -188,7 +230,9 @@ export async function sendApprovalConfirmation(
       <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">${project.company}</p>
       <div style="background:#f3f4f6;border-radius:12px;padding:20px;margin-bottom:24px;">
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date</strong><br>${from.date}</p>
-        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
+        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
+        ${bookerLocalTimeBlock(booking)}
+        <p style="margin:12px 0 0;font-size:14px;color:#374151;">${describeLocation(booking)}</p>
       </div>
       <p style="font-size:14px;color:#374151;">Great news, <strong>${booking.bookerName}</strong>! Your booking has been confirmed by Chiibitsu Labs.</p>
       <a href="${addToCalUrl}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add to Google Calendar</a>
@@ -201,6 +245,8 @@ export async function sendApprovalConfirmation(
   });
 }
 
+// Deliberately omits describeLocation(): this mail declines the booking, and a
+// "we'll send the joining link" line would read as a confirmation.
 export async function sendRejectionEmail(
   booking: BookingDetails,
   project: Project,
@@ -227,7 +273,8 @@ export async function sendRejectionEmail(
       <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">${project.company}</p>
       <div style="background:#f3f4f6;border-radius:12px;padding:20px;margin-bottom:24px;">
         <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>📅 Date requested</strong><br>${from.date}</p>
-        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time}</p>
+        <p style="margin:0;font-size:14px;color:#374151;"><strong>🕐 Time</strong><br>${from.time} – ${to.time} <span style="color:#6b7280;">(${friendlyZoneName(TIMEZONE)} time)</span></p>
+        ${bookerLocalTimeBlock(booking)}
       </div>
       <p style="font-size:14px;color:#374151;">Hi <strong>${booking.bookerName}</strong>,</p>
       <p style="font-size:14px;color:#374151;">Unfortunately we're unable to confirm this booking. You're welcome to pick a different date — we'd love to find a time that works!</p>
@@ -252,7 +299,7 @@ export async function sendBookingNotificationToAdmin(
 
   const customFieldsText = Object.entries(booking.customFields)
     .filter(([, v]) => v)
-    .map(([k, v]) => `• ${k}: ${v}`)
+    .map(([k, v]) => `• ${prettifyFieldKey(k)}: ${v}`)
     .join('\n');
 
   await resend.emails.send({
