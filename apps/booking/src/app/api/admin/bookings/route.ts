@@ -12,14 +12,29 @@ import { ADMIN_LOCATION_KEY, LOCATION_CHOICES, isLocationChoice } from '@/lib/lo
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE ?? 'Asia/Manila';
 
+const MIN_DURATION_MINUTES = 5;
+const MAX_DURATION_MINUTES = 24 * 60;
+// Google Calendar caps each extendedProperties value at 1024 characters; we
+// count UTF-8 bytes, which is never fewer, so this errs on the safe side.
+const MAX_STORED_FIELDS_BYTES = 1024;
+
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!checkAdminAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const bookings = await getUpcomingBookings();
-    return NextResponse.json({ bookings });
+    const { bookings, failedCalendars } = await getUpcomingBookings();
+    return NextResponse.json({ bookings, failedCalendars });
   } catch (err) {
     console.error('Admin bookings error:', err);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
@@ -124,7 +139,17 @@ export async function POST(req: NextRequest) {
     if (Number.isNaN(startUTC.getTime())) {
       return NextResponse.json({ error: 'Invalid date or time.' }, { status: 400 });
     }
-    const minutes = Number(durationMinutes) > 0 ? Number(durationMinutes) : project.durationMinutes;
+    // Blank means the project's own length. Anything else must be a whole
+    // number of minutes in a sane range: 0.5 made a 30-second event and 1e9 an
+    // end date centuries out (and a conflict check over that whole window).
+    const rawDuration = durationMinutes === undefined || durationMinutes === null ? '' : String(durationMinutes).trim();
+    const minutes = rawDuration === '' ? project.durationMinutes : Number(rawDuration);
+    if (!Number.isInteger(minutes) || minutes < MIN_DURATION_MINUTES || minutes > MAX_DURATION_MINUTES) {
+      return NextResponse.json(
+        { error: `Length must be a whole number of minutes from ${MIN_DURATION_MINUTES} to ${MAX_DURATION_MINUTES}.` },
+        { status: 400 },
+      );
+    }
     const endUTC = addMinutes(startUTC, minutes);
 
     // A mistyped past date would still create a real invite and email, but
@@ -133,6 +158,15 @@ export async function POST(req: NextRequest) {
     if (startUTC.getTime() < Date.now()) {
       return NextResponse.json(
         { error: 'That start time is in the past. Bookings must be in the future.' },
+        { status: 400 },
+      );
+    }
+
+    // The form checks this too, but the route is the boundary: a bad id would
+    // be stored and then silently drop the client's "Your local time" block.
+    if (bookerTimezone && !isValidTimeZone(String(bookerTimezone))) {
+      return NextResponse.json(
+        { error: `"${bookerTimezone}" is not a timezone name. Use an IANA id like America/Vancouver.` },
         { status: 400 },
       );
     }
@@ -147,6 +181,16 @@ export async function POST(req: NextRequest) {
     // Google caps extendedProperties.private values, and every custom field
     // shares one serialised value — an unbounded note would 400 events.insert.
     if (notes) customFields.admin_note = String(notes).slice(0, 500);
+    // The 500-character cut bounds the note, not what is stored: every field
+    // is serialised into ONE extendedProperties value, and JSON escaping
+    // (quotes, backslashes, newlines) can push that past Google's limit, so
+    // events.insert would fail. Check the stored value itself.
+    if (Buffer.byteLength(JSON.stringify(customFields), 'utf8') > MAX_STORED_FIELDS_BYTES) {
+      return NextResponse.json(
+        { error: 'The internal note is too long once stored. Shorten it and try again.' },
+        { status: 400 },
+      );
+    }
 
     const booking = {
       projectName: project.name,

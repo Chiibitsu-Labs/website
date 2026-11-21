@@ -389,7 +389,19 @@ export interface AdminBooking {
   customFields: Record<string, string>;
 }
 
-export async function getUpcomingBookings(): Promise<AdminBooking[]> {
+export interface UpcomingBookings {
+  bookings: AdminBooking[];
+  /** Calendars that could not be read; the list is missing their bookings. */
+  failedCalendars: number;
+}
+
+/**
+ * Upcoming system bookings across the default calendar and every project's own.
+ * Throws when NO calendar could be read: an empty list would read as "no
+ * bookings" (expired credentials, a Google outage) when the real state is
+ * unknown. When only some fail, returns what it has and says how many failed.
+ */
+export async function getUpcomingBookings(): Promise<UpcomingBookings> {
   const calendar = getCalendarClient();
   const defaultCalId = process.env.GOOGLE_CALENDAR_ID ?? 'primary';
 
@@ -406,6 +418,8 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
   );
 
   type Listed = { calId: string; e: calendar_v3.Schema$Event };
+  let failedCalendars = 0;
+  let lastError: unknown;
   const results = await Promise.all(
     calendarIds.map(async (calId): Promise<Listed[]> => {
       try {
@@ -421,10 +435,18 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
       } catch (err) {
         // One unreachable calendar must not empty the whole list.
         console.error(`getUpcomingBookings: calendar ${calId} failed:`, err);
+        failedCalendars += 1;
+        lastError = err;
         return [];
       }
     }),
   );
+
+  if (failedCalendars === calendarIds.length) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('No booking calendar could be read.');
+  }
 
   // 'primary' and the account's explicit address are distinct strings but the
   // same calendar, so the same event can arrive twice.
@@ -435,7 +457,7 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
     return true;
   });
 
-  return events
+  const bookings = events
     .filter(({ e }) => e.start?.dateTime)
     .map(({ calId, e }) => {
       const props = e.extendedProperties?.private ?? {};
@@ -470,6 +492,8 @@ export async function getUpcomingBookings(): Promise<AdminBooking[]> {
     // Merged from several calendars, so each list's own ordering no longer
     // holds. Compare instants: the strings carry per-calendar UTC offsets.
     .sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime());
+
+  return { bookings, failedCalendars };
 }
 
 /**
