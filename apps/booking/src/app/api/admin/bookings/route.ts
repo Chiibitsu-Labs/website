@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { bookings, failedCalendars } = await getUpcomingBookings();
-    return NextResponse.json({ bookings, failedCalendars });
+    const { bookings, failedCalendars, projectListFailed } = await getUpcomingBookings();
+    return NextResponse.json({ bookings, failedCalendars, projectListFailed });
   } catch (err) {
     console.error('Admin bookings error:', err);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });

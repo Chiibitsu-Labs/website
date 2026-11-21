@@ -122,6 +122,7 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
   // an empty calendar when the real state is unknown.
   const [loadError, setLoadError] = useState('');
   const [failedCalendars, setFailedCalendars] = useState(0);
+  const [projectListFailed, setProjectListFailed] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -139,14 +140,17 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
         );
         setBookings(null);
         setFailedCalendars(0);
+        setProjectListFailed(false);
       } else {
         setBookings(data.bookings);
         setFailedCalendars(Number(data.failedCalendars) || 0);
+        setProjectListFailed(data.projectListFailed === true);
       }
     } catch {
       setLoadError('Could not load bookings: the request failed.');
       setBookings(null);
       setFailedCalendars(0);
+      setProjectListFailed(false);
     }
     setLoading(false);
   }
@@ -186,6 +190,11 @@ function BookingsTab({ adminEmail, adminPassword }: { adminEmail: string; adminP
       {loadError && (
         <p className="text-red-400 text-sm mb-5" role="alert">
           {loadError} Try ↻ Refresh.
+        </p>
+      )}
+      {!loadError && projectListFailed && (
+        <p className="text-amber-400 text-sm mb-5" role="alert">
+          The session list could not be read, so bookings on session-specific calendars may be missing.
         </p>
       )}
       {!loadError && failedCalendars > 0 && (

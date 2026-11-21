@@ -393,6 +393,12 @@ export interface UpcomingBookings {
   bookings: AdminBooking[];
   /** Calendars that could not be read; the list is missing their bookings. */
   failedCalendars: number;
+  /**
+   * The project list could not be read from the database, so project
+   * calendars are unknown and were not read at all. Not counted in
+   * failedCalendars because we cannot say how many there are.
+   */
+  projectListFailed: boolean;
 }
 
 /**
@@ -408,7 +414,17 @@ export async function getUpcomingBookings(): Promise<UpcomingBookings> {
   const { getProjects, getAllProjectsAdmin } = await import('@/lib/db');
   // The manual path can book a PAUSED project, so resolve calendars from the
   // admin list; getProjects filters to is_active and would hide those bookings.
-  const adminList = await getAllProjectsAdmin().catch(() => []);
+  // A database error here must not pass for "no projects": the seed fallback
+  // carries no calendar ids, so every project calendar would be skipped while
+  // the list still looked complete.
+  let projectListFailed = false;
+  let adminList: Awaited<ReturnType<typeof getAllProjectsAdmin>> = [];
+  try {
+    adminList = await getAllProjectsAdmin();
+  } catch (err) {
+    console.error('getUpcomingBookings: project list failed:', err);
+    projectListFailed = true;
+  }
   const projectList = adminList.length > 0 ? adminList : await getProjects();
 
   // Bookings are created on the project's own calendar when it has one, so
@@ -493,7 +509,7 @@ export async function getUpcomingBookings(): Promise<UpcomingBookings> {
     // holds. Compare instants: the strings carry per-calendar UTC offsets.
     .sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime());
 
-  return { bookings, failedCalendars };
+  return { bookings, failedCalendars, projectListFailed };
 }
 
 /**
