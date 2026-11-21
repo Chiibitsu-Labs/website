@@ -410,7 +410,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-clarity-mask="True">
           {/* Core fields */}
           <Field label="Full name" error={formErrors.name} required>
             <input
@@ -570,7 +570,7 @@ export function BookingFlow({ project, rescheduleToken, prefill }: Props) {
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-1">You&apos;re booked!</h3>
         <p className="text-gray-500 text-sm mb-6">
-          A confirmation has been sent to <strong>{result.email}</strong>
+          A confirmation has been sent to <strong data-clarity-mask="True">{result.email}</strong>
         </p>
 
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-6">
