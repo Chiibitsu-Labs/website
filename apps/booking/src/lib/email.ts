@@ -280,7 +280,7 @@ export async function sendBookingNotificationToAdmin(
 
       ${booking.bookerPhone ? `<p style="margin:0 0 4px;font-size:14px;color:#374151;">📱 ${esc(booking.bookerPhone)}</p>` : ''}
       ${booking.bookerCompany ? `<p style="margin:0 0 4px;font-size:14px;color:#374151;">🏢 ${esc(booking.bookerCompany)}</p>` : ''}
-      ${customFieldsText ? `<pre style="margin:16px 0 0;font-size:13px;color:#374151;background:#f9fafb;padding:12px;border-radius:8px;white-space:pre-wrap;">${esc(customFieldsText)}</pre>` : ''}
+      ${customFieldsText ? `<pre style="margin:16px 0 0;font-size:13px;color:#374151;background:#f9fafb;padding:12px;border-radius:8px;white-space:pre-wrap;">${customFieldsText}</pre>` : ''}
 
       ${safeHref(eventLink) ? `<a href="${esc(safeHref(eventLink))}" style="display:inline-block;margin-top:20px;padding:10px 20px;background:#111827;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">View in Google Calendar →</a>` : ''}
     </div>

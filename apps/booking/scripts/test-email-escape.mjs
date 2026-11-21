@@ -24,11 +24,13 @@ assert.equal(safeHref('https://calendar.google.com/x'), 'https://calendar.google
 const src = readFileSync(new URL('../src/lib/email.ts', import.meta.url), 'utf8')
   .replace(/safeSubject\(`[^`]*`\)/g, '') // subjects: covered by safeSubject
   .replace(/function buildAddToCalendarUrl[\s\S]*?\n}\n/, ''); // encodeURIComponent'd, fixed host
-const ALREADY_ESCAPED = new Set(['customFieldsHtml', 'fields']); // built with esc() above
+const ALREADY_ESCAPED = new Set(['customFieldsHtml', 'fields', 'customFieldsText']); // built with esc() above
 const INPUT = /booking\.|project\.|booker|customFields|eventLink|\bk\b|\bv\b|projectName|dateLabel|timeLabel/;
 const bad = [...src.matchAll(/\$\{([^{}`]*)\}/g)].map((m) => m[1].trim()).filter(
   (e) => INPUT.test(e) && !ALREADY_ESCAPED.has(e) && !/^(esc|safeSubject|encodeURIComponent)\(/.test(e) && !/^[\w.]+ \?$/.test(e) && !/\?$/.test(e)
     && !/^safeHref\(eventLink\) \?/.test(e),
 );
 assert.deepEqual(bad, [], `raw interpolation in email.ts: ${bad.join(' | ')}`);
+// No double-escaping: values already built with esc() must not be wrapped again.
+assert.ok(!/esc\((customFieldsText|fields|customFieldsHtml)\)/.test(src), 'double escape in email.ts');
 console.log('email escape tests passed');
